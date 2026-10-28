@@ -1,0 +1,17 @@
+{
+  "name": "turno-tournament-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tournament logic engine and mockup for turno-sport: formats, standings, pools, advancing teams, brackets, Americano and scheduling.",
+  "scripts": {
+    "test": "node tests/engine-flow.test.js && node tests/engine-formats.test.js",
+    "test:ui": "node tests/ui.test.js",
+    "serve": "python3 -m http.server 8080 --directory mockup"
+  },
+  "devDependencies": {
+    "htm": "3.1.1",
+    "jsdom": "24.1.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}
