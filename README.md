@@ -47,3 +47,13 @@ The mockup stores its state in the browser's localStorage. Event → “Start a 
 - **Scheduling:** `generateFixedSchedule`, `buildQueue`, `fillCourts`
 
 State is plain JSON.
+
+
+
+Per testare il mockup in tranqui, naviga fino alla cartella mockup/ e poi starta index.html, su Mac è open index.html, bella.
+
+
+
+
+
+
