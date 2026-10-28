@@ -1,4 +1,4 @@
-// Clicks through the mockup in jsdom. Usage: node ui2.js <deps dir with node_modules> <mockup dir>
+// Builds two tournaments from an empty event in the mockup (jsdom). Usage: node ui.test.js [deps dir] [mockup dir]
 const path = require('path'), fs = require('fs');
 const deps = process.argv[2] || path.join(__dirname, '..'), mock = process.argv[3] || path.join(__dirname, '../mockup');
 const { JSDOM } = require(path.join(deps, 'node_modules/jsdom'));
@@ -13,97 +13,93 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $$ = (s, root) => [...(root || w.document).querySelectorAll(s)];
 const btn = (text, root) => $$('button', root).find((b) => b.textContent.trim().startsWith(text) && !b.disabled);
 const click = async (el, what) => { if (!el) throw new Error('missing element: ' + what); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); await sleep(25); };
-const setVal = async (el, v) => { const proto = el.tagName === 'SELECT' ? w.HTMLSelectElement.prototype : w.HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v); el.dispatchEvent(new w.Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); await sleep(25); };
+const setVal = async (el, v, what) => { if (!el) throw new Error('missing field: ' + what); const proto = el.tagName === 'SELECT' ? w.HTMLSelectElement.prototype : el.tagName === 'TEXTAREA' ? w.HTMLTextAreaElement.prototype : w.HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v); el.dispatchEvent(new w.Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); await sleep(25); };
 const main = () => w.document.querySelector('.main').textContent;
-const go = async (label, cat) => { await click($$('.nav-item').find((b) => b.querySelector('.nav-label').textContent.replace(' optional', '') === label), label); if (cat) await click($$('.cat-tab').find((b) => b.textContent === cat), cat); };
+const go = async (label) => click($$('.nav-item').find((b) => b.querySelector('.nav-label').textContent.replace(' optional', '') === label), label);
+const card = () => $$('.phase-card').pop();
+const rows = () => $$('.rank-pick .pick-label', card()).map((x) => x.textContent);
+const pickKind = async (label) => click($$('[aria-label="Ranking"] button', card()).find((b) => b.textContent === label), label);
+const tick = async (label) => click($$('.pick', card()).find((l) => l.querySelector('.pick-label').textContent === label).querySelector('input'), label);
+const fromPhase = async (name) => { const s = card().querySelector('select[aria-label="From phase"]'); await setVal(s, $$('option', s).find((o) => o.textContent === name).value, 'from ' + name); };
+const addPhase = async (type, name) => { await setVal($$('select[aria-label="Phase type"]')[0], type, 'type'); await setVal($$('input[aria-label="Phase name"]').pop(), name, 'name'); await click(btn('Add phase'), 'add phase'); };
+const fillAll = async () => { for (let i = 0; i < 6; i++) { const b = btn('Fill example results'); if (!b) break; await click(b, 'fill'); } };
+const confirm = async (name) => { for (let i = 0; i < 12 && btn('Keep this order'); i++) await click(btn('Keep this order'), 'keep'); await click(btn('Confirm ' + name), 'confirm ' + name); };
 let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console.log('ok  ', m); };
+
 (async () => {
   await sleep(100);
+  check(w.document.querySelector('.t-name').textContent === 'New tournament' && !btn('Reset example'), 'starts from an empty event, no example');
   const labels = $$('.nav-item').map((b) => b.querySelector('.nav-label').textContent.replace(' optional', ''));
-  console.log('nav:', labels.join(' | '));
-  for (const cat of ["Men's Open", 'Americano Night']) for (let i = 0; i < labels.length; i++) {
-    await click($$('.nav-item')[i], labels[i]); const t = $$('.cat-tab').find((b) => b.textContent === cat); if (t) await click(t, cat);
-    if (!main().length) { fails++; console.log('FAIL empty view', cat, labels[i]); }
-  }
-  check(!errors.length, 'every view renders for both categories');
-  // Format builder shows the graph and is valid
-  await go('Format', "Men's Open");
-  check(main().includes('The format is valid') && $$('.phase-card').length === 3, 'format builder: 3 phases, valid');
-  // add a second groups phase: step 1 offers exactly the three rankings of the groups phase
-  await setVal($$('select[aria-label="Phase type"]')[0], 'GROUPS');
-  await setVal($$('input[aria-label="Phase name"]').pop(), 'Consolation');
-  await click(btn('Add phase'), 'add phase');
-  let card = $$('.phase-card').pop();
-  check($$('.step', card).length === 3, 'new phase card has 3 steps');
-  check(card.textContent.includes('Final ranking') && card.textContent.includes('B Flight'), 'new phase takes everyone from the previous phase by default');
-  await setVal(card.querySelector('select[aria-label="From phase"]'), $$('option', card.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'Pool Play').value);
-  card = $$('.phase-card').pop();
-  const kinds = $$('[aria-label="Ranking"] button', card).map((b) => b.textContent);
-  check(kinds.join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'from a groups phase: Pool, Cross-pool, Overall ranking');
-  check($$('.rank-list li', card).map((l) => l.querySelector('b').textContent).join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'step 3 lists the rankings this phase calculates');
-  // each ranking shows its full list of places (10 teams in Pool Play: groups of 4, 3, 3)
-  const rows = () => $$('.rank-pick .pick-label', $$('.phase-card').pop()).map((x) => x.textContent);
-  const pickKind = async (label) => click($$('[aria-label="Ranking"] button', $$('.phase-card').pop()).find((b) => b.textContent === label), label);
-  await pickKind('Cross-pool ranking');
-  check(rows().length === 10 && rows()[0] === '1st of 1sts' && rows()[1] === '2nd of 1sts' && rows()[9] === '1st of 4ths', 'cross-pool list: 1st of 1sts … 1st of 4ths (10 rows): ' + rows().join(','));
-  await pickKind('Overall ranking');
-  check(rows().length === 10 && rows()[0] === '1st' && rows()[9] === '10th (last)', 'overall list: 1st … 10th (last)');
-  await pickKind('Pool ranking');
-  check(rows().length === 10 && rows()[0] === '1st Group A', 'pool list: every place of every group (10 rows)');
-  check($$('.pick.taken', $$('.phase-card').pop()).length === 10, 'places already used by the flights are marked (all 10)');
-  // tick 1st Group A (already in A Flight) -> save -> error
-  const pick = (label) => $$('.pick', $$('.phase-card').pop()).find((l) => l.querySelector('.pick-label').textContent === label).querySelector('input');
-  await click(pick('1st Group A'), 'tick');
-  check(main().includes('not saved yet'), 'ticking shows unsaved selection');
-  await click(btn('Save selection', $$('.phase-card').pop()), 'save');
-  check(main().includes('used twice'), 'builder shows the "used twice" error');
-  await click(pick('1st Group A'), 'untick');
-  await click(btn('Save selection', $$('.phase-card').pop()), 'save again');
-  check(main().includes('The format is valid'), 'error gone after unticking');
-  // from A Flight: the final ranking list, tick the 5th place
-  const fromSel = $$('.phase-card').pop().querySelector('select[aria-label="From phase"]');
-  await setVal(fromSel, $$('option', fromSel).find((o) => o.textContent === 'A Flight').value);
-  check(rows().length === 6 && rows()[0] === '1st' && rows()[5] === '6th (last)', 'A Flight final ranking: 1st … 6th (last)');
-  await click(pick('5th'), 'tick 5th');
-  await click(btn('Save selection', $$('.phase-card').pop()), 'save 5th');
-  check($$('.phase-card').pop().textContent.includes('Final ranking · places 5 of A Flight') && main().includes('The format is valid'), 'ticked place saved as a selection');
-  // switch distribution in step 2
-  card = $$('.phase-card').pop();
-  await setVal(card.querySelector('select[aria-label="Distribution"]') || $$('select', card).find((x) => x.id.startsWith('dd-')), 'AVOID_REMATCH');
-  check($$('.phase-card').pop().textContent.includes('Decided when the earlier phase is confirmed'), 'step 2 distribution: avoid rematches');
-  // play Pool Play, confirm, play flights, confirm A, consolation fills
-  await go('Games & results', "Men's Open");
-  await click(btn('Fill example results'), 'fill pool');
-  await go('Standings', "Men's Open");
-  for (let i = 0; i < 12 && btn('Keep this order'); i++) await click(btn('Keep this order'), 'keep order');
-  await click(btn('Confirm Pool Play'), 'confirm pool');
-  check(main().includes('Pool Play is confirmed'), 'Pool Play confirmed');
-  await go('Games & results', "Men's Open");
-  for (let i = 0; i < 4; i++) { const b = btn('Fill example results'); if (b) await click(b, 'fill'); }
-  await go('Standings', "Men's Open");
-  check(main().includes('Final placings'), 'final placings table shown');
-  await click(btn('Confirm A Flight'), 'confirm A');
-  check(main().includes('A Flight is confirmed'), 'A Flight confirmed');
-  check(true, 'A Flight placings available');
-  // Americano
-  await go('Games & results', 'Americano Night'); await click(btn('Fill example results'), 'fill am');
-  await go('Standings', 'Americano Night');
-  for (let i = 0; i < 6 && btn('Keep this order'); i++) await click(btn('Keep this order'), 'keep');
-  await click(btn('Confirm Americano'), 'confirm am');
-  check(main().includes('Americano is confirmed') && main().includes(' / '), 'americano confirmed; playoff pairs created');
-  // New event + 3-stage preset
-  await go('Event');
-  await setVal(w.document.getElementById('nt-sport'), 'FUTSAL');
-  await click(btn('Create event'), 'create'); await click(btn('Create event', w.document.querySelector('.modal')), 'confirm create');
+  for (let i = 0; i < labels.length; i++) { await click($$('.nav-item')[i], labels[i]); if (!main().length) { fails++; console.log('FAIL empty view', labels[i]); } }
+  check(!errors.length, 'every view renders on an empty event');
+
+  // ---- football: Pool Play -> A Flight + B Flight
   await go('Teams');
-  const ta = w.document.getElementById('bulk'); Object.getOwnPropertyDescriptor(w.HTMLTextAreaElement.prototype, 'value').set.call(ta, Array.from({ length: 12 }, (_, i) => 'Team ' + (i + 1)).join('\n')); ta.dispatchEvent(new w.Event('input', { bubbles: true })); await sleep(25);
+  await setVal(w.document.getElementById('bulk'), Array.from({ length: 10 }, (_, i) => 'Team ' + (i + 1)).join('\n'), 'bulk');
   await click(btn('Save'), 'save teams');
   await go('Format');
-  await click($$('.tpl').find((b) => b.textContent.includes('reshuffled')), 'pick RR3');
-  await click(btn('Apply preset'), 'apply');
-  check($$('.phase-card').length === 4 && main().includes('do not continue'), 'Groups × 3 preset: 4 phases, warns teams stopping after stage 3');
-  await go('Phase setup');
-  check(main().includes('place 1') && main().includes('Avoid rematches'), 'stage 2 shows neutral places and avoid-rematch distribution');
+  check(!main().includes('Start from a preset') && $$('.schema-row').length === 3, 'no presets; schema of the 3 phase types');
+  check($$('.schema-row').every((r) => r.textContent.includes('Input') && r.textContent.includes('What it does') && r.textContent.includes('Output')), 'each phase type shows input, what it does, output');
+  check($$('.schema-row')[0].textContent.includes('Cross-pool ranking') && $$('.schema-row')[1].textContent.includes('Final ranking'), 'outputs listed per type');
+  await addPhase('GROUPS', 'Pool Play');
+  await setVal($$('select', card()).find((s) => s.id.startsWith('ng-')), '3', 'groups');
+  check(card().textContent.includes('Group A: 3 · Group B: 3 · Group C: 4'), 'Pool Play: 10 teams in 3 groups');
+  await addPhase('KNOCKOUT', 'A Flight');
+  check(card().textContent.includes('Overall ranking') && card().textContent.includes('places 1-10'), 'new phase starts with everyone from the previous phase');
+  await click(btn('Clear this list', card()), 'clear overall');
+  await pickKind('Pool ranking');
+  for (const g of ['A', 'B', 'C']) { await tick(`1st Group ${g}`); await tick(`2nd Group ${g}`); }
+  await click(btn('Save selection', card()), 'save A');
+  check(card().textContent.includes('Pool ranking · places 1-2 of every group'), 'A Flight = top 2 of every group');
+  await addPhase('KNOCKOUT', 'B Flight');
+  await fromPhase('Pool Play');
+  await pickKind('Cross-pool ranking');
+  check(rows().length === 10 && rows()[0] === '1st of 1sts' && rows()[9] === '1st of 4ths', 'cross-pool list has all 10 places');
+  await pickKind('Overall ranking');
+  check(rows().length === 10 && rows()[9] === '10th (last)', 'overall list has 1st … 10th (last)');
+  await pickKind('Pool ranking');
+  check($$('.pick.taken', card()).length === 6, 'places used by A Flight are marked');
+  for (const l of ['3rd Group A', '3rd Group B', '3rd Group C', '4th Group C']) await tick(l);
+  await click(btn('Save selection', card()), 'save B pool');
+  await fromPhase('A Flight');
+  await click(btn('Clear this list', card()), 'clear A final');
+  await click(btn('Save selection', card()), 'save B');
+  check(card().textContent.includes('Pool ranking · places 3-4 of every group') && !card().textContent.includes('of A Flight'), 'B Flight = 3rd and 4th of every group');
+  check(main().includes('The format is valid'), 'format valid');
+
+  // ---- play it
+  await go('Event'); await click(btn('Publish'), 'publish');
+  await go('Games & results'); await click(btn('Fill example results'), 'fill pool');
+  await go('Standings'); await confirm('Pool Play');
+  check(main().includes('Pool Play is confirmed'), 'Pool Play confirmed, flights filled');
+  await go('Games & results'); await fillAll();
+  await go('Standings');
+  check(main().includes('Final placings'), 'final placings shown');
+  await confirm('A Flight');
+  check(main().includes('A Flight is confirmed'), 'A Flight confirmed');
+
+  // step 2: a reshuffled group stage after the flights
+  await go('Format');
+  await addPhase('GROUPS', 'Stage 2');
+  await setVal($$('select', card()).find((s) => s.id.startsWith('dd-')), 'AVOID_REMATCH', 'distribution');
+  check(card().textContent.includes('Decided when the earlier phase is confirmed'), 'step 2: avoid rematches');
+
+  // ---- padel Americano -> pairs knockout
+  await go('Event');
+  await setVal(w.document.getElementById('nt-sport'), 'PADEL', 'sport');
+  await click(btn('Create event'), 'create'); await click(btn('Create event', w.document.querySelector('.modal')), 'confirm create');
+  await go('Format'); await addPhase('AMERICANO', 'Americano');
+  await go('Players');
+  await setVal(w.document.getElementById('bulk'), ['Giulia', 'Marco', 'Sara', 'Luca', 'Elena', 'Paolo', 'Chiara', 'Davide'].join('\n'), 'players');
+  await click(btn('Save'), 'save players');
+  await go('Event'); await click(btn('Publish'), 'publish padel');
+  await go('Games & results'); await click(btn('Fill example results'), 'fill am');
+  await go('Standings'); await confirm('Americano');
+  await go('Format'); await addPhase('KNOCKOUT', 'Playoffs');
+  check(card().textContent.includes('Players are paired'), 'knockout after Americano pairs the players');
+  await go('Games & results');
+  check(main().includes(' / '), 'playoff game shows the pairs');
+
   console.log('ERRORS:', errors.length ? errors.slice(0, 5) : 'none');
   console.log(fails || errors.length ? 'UI FAILED' : 'UI PASSED');
   process.exit(fails || errors.length ? 1 : 0);

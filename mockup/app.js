@@ -3,42 +3,14 @@
   'use strict';
   const { useState, useEffect } = React;
   const html = htm.bind(React.createElement);
-  const STORE = 'tournament-mockup-v2';
+  const STORE = 'tournament-mockup-v3';
 
   // ---------- persistence ----------
   function load() {
     try { const s = localStorage.getItem(STORE); if (s) { const p = JSON.parse(s); if (p && p.version === 2) return TE.migrateState(p); } } catch (e) { /* storage unavailable */ }
-    return seed();
+    return TE.newState('FOOTBALL', 'New tournament');
   }
   function save(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { /* ignore */ } }
-  function xorshift(seed) { let s = seed; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 1e6) / 1e6; }; }
-
-  // ---------- sample tournament (clearly labelled as example data) ----------
-  function seed() {
-    const st = TE.newState('PADEL', 'Autumn Padel Open (example)');
-    st.tournament.status = 'PUBLISHED';
-    const men = st.categories[0]; men.name = "Men's Open"; men.format = TE.defaultRules('PADEL');
-    const pairs = [['Rossi', 'Bianchi'], ['Ferrari', 'Esposito'], ['Romano', 'Colombo'], ['Ricci', 'Marino'], ['Greco', 'Bruno'], ['Gallo', 'Conti'], ['De Luca', 'Mancini'], ['Costa', 'Giordano'], ['Rizzo', 'Lombardi'], ['Moretti', 'Barbieri']];
-    pairs.forEach(([a, b], i) => men.teams.push({ id: TE.uid('team'), name: `${a} / ${b}`, seed: i + 1, players: [{ id: TE.uid('pl'), name: a }, { id: TE.uid('pl'), name: b }] }));
-    TE.applyTemplate(st, men, 'RR_SE', 2);
-    const A = TE.sortedPhases(men)[1]; A.config.placements = [1, 3]; TE.rebuildPhase(st, men, A);
-    const rand = xorshift(20261101);
-    const pool = TE.sortedPhases(men)[0];
-    TE.phaseGames(men, pool.id).slice(0, 8).forEach((g) => TE.recordResult(st, men, g, TE.randomResult(st, men, g, rand)));
-
-    const am = TE.newCategory('Americano Night', 'PADEL'); st.categories.push(am);
-    ['Giulia', 'Marco', 'Sara', 'Luca', 'Elena', 'Paolo', 'Chiara', 'Davide'].forEach((n) => am.players.push({ id: TE.uid('pl'), name: n }));
-    am.format.americano.rounds = 7;
-    TE.applyTemplate(st, am, 'AM_SE');
-
-    st.venues.push({ id: TE.uid('ven'), name: 'Club Padel Center', spaces: [1, 2, 3, 4].map((n) => ({ id: TE.uid('sp'), name: `Court ${n}`, categoryIds: [] })) });
-    st.venues[0].spaces.forEach((s) => { st.schedule.courts[s.id] = null; });
-    st.schedule.blocks.push({ id: TE.uid('blk'), day: '2026-11-07', start: '09:00', end: '20:00', spaceIds: st.venues[0].spaces.map((s) => s.id) });
-    TE.buildQueue(st);
-    st.schedule.lastFinished = {};
-    TE.fillCourts(st);
-    return st;
-  }
 
   // ---------- small UI parts ----------
   const Pill = ({ tone, children }) => html`<span className=${'pill ' + (tone || '')}>${children}</span>`;
@@ -105,7 +77,6 @@
         <div className="brand"><span className="dot" aria-hidden="true"></span><div><div className="t-name">${st.tournament.name}</div><div className="t-meta">${sport.label} · tournament engine mockup</div></div></div>
         <div className="row">
           <${Pill} tone=${st.tournament.status === 'PUBLISHED' ? 'good' : 'warn'}>${st.tournament.status === 'PUBLISHED' ? 'Published' : 'Draft'}<//>
-          <${Btn} kind="ghost" onClick=${() => ask('Reset the example?', 'This replaces everything with the padel example tournament.', 'Reset', () => { const s = seed(); save(s); setSt(s); setCatId(s.categories[0].id); say('Example tournament restored.'); }, true)}>Reset example<//>
         </div>
       </header>
       <div className="layout">
@@ -168,33 +139,18 @@
   // ---------- Format: presets + phase builder ----------
   function FormatView(ctx) {
     const { st, cat, act, ask, say } = ctx;
-    const tpls = TE.templatesFor(st.tournament.sport);
-    const [sel, setSel] = useState('RR_SE');
-    const [flights, setFlights] = useState(1);
     const [newType, setNewType] = useState('GROUPS');
     const [newName, setNewName] = useState('');
     const phases = TE.sortedPhases(cat);
     const graph = TE.validateGraph(st, cat);
-    const tpl = tpls.find((t) => t.id === sel) || tpls[0];
     const types = Object.entries(TE.PHASE_TYPES).filter(([k]) => k !== 'AMERICANO' || TE.SPORTS[st.tournament.sport].americano);
     return html`<div className="stack">
-      <${Section} title="Start from a preset" sub="Presets create a ready-made chain of phases that you can then change below.">
-        <div className="tpl-grid" role="radiogroup" aria-label="Preset">
-          ${tpls.map((t) => html`<button key=${t.id} role="radio" aria-checked=${sel === t.id} className=${'tpl' + (sel === t.id ? ' on' : '')} onClick=${() => setSel(t.id)}>
-            <span className="tpl-flow">${t.flow.map((ty, i) => html`${i ? html`<span className="arrow">→</span>` : null}${typeChip(ty)}`)}</span>
-            <span className="tpl-name">${t.name}${t.recommended ? html` <${Pill} tone="accent">Recommended<//>` : null}</span>
-            <span className="tpl-desc">${t.desc}</span></button>`)}
-        </div>
-        <div className="row">
-          ${sel === 'RR_SE' || sel === 'RR_DE' ? html`<label className="row" htmlFor="fl-n"><span className="field-label">Playoff brackets</span><select id="fl-n" value=${flights} onChange=${(e) => setFlights(+e.target.value)}>${[1, 2, 3, 4, 5].map((n) => html`<option value=${n}>${n}</option>`)}</select></label>` : null}
-          <${Btn} kind="primary" onClick=${() => { const go = () => { act((d, c) => TE.applyTemplate(d, c, tpl.id, flights)); say(`${tpl.name} applied to ${cat.name}.`); }; phases.length ? ask('Replace the current phases?', `All phases of ${cat.name}${resultsIn(cat) ? ` and its ${resultsIn(cat)} results` : ''} are replaced by the preset.`, 'Replace', go, true) : go(); }}>Apply preset<//>
-        </div>
-      <//>
+      <${PhaseSchema} sport=${st.tournament.sport} />
 
       <${Section} title="Phases" sub="Each phase takes participants from earlier phases (or the team list), plays its games and produces rankings. Later phases pick places from those rankings.">
         ${graph.errors.length ? html`<${Note} tone="bad"><b>${graph.errors.length} problem${graph.errors.length > 1 ? 's' : ''} to fix</b><ul className="msgs">${graph.errors.map((e) => html`<li>${e.msg}</li>`)}</ul><//>` : phases.length ? html`<${Note} tone="good">The format is valid.<//>` : null}
         ${graph.warnings.length ? html`<${Note} tone="warn"><ul className="msgs">${graph.warnings.map((e) => html`<li>${e.msg}</li>`)}</ul><//>` : null}
-        ${phases.length ? html`<ol className="graph">${phases.map((p) => html`<li key=${p.id}><span className="seedno">${p.order}</span>${typeChip(p.type)}<b>${p.name}</b><span className="muted small">${p.entrants.length} places</span>${TE.sourcesOf(cat, p).length ? html`<span className="muted small">← ${TE.sourcesOf(cat, p).map((s) => s.name).join(', ')}</span>` : html`<span className="muted small">← ${TE.PHASE_TYPES[p.type].kind === 'PLAYER' ? 'player list' : 'team list'}</span>`}</li>`)}</ol>` : html`<${Note}>No phases yet. Apply a preset or add a phase.<//>`}
+        ${phases.length ? html`<ol className="graph">${phases.map((p) => html`<li key=${p.id}><span className="seedno">${p.order}</span>${typeChip(p.type)}<b>${p.name}</b><span className="muted small">${p.entrants.length} places</span>${TE.sourcesOf(cat, p).length ? html`<span className="muted small">← ${TE.sourcesOf(cat, p).map((s) => s.name).join(', ')}</span>` : html`<span className="muted small">← ${TE.PHASE_TYPES[p.type].kind === 'PLAYER' ? 'player list' : 'team list'}</span>`}</li>`)}</ol>` : html`<${Note}>No phases yet. Add the first phase below.<//>`}
         <div className="phase-list">${phases.map((p) => html`<${PhaseEditor} key=${p.id} ...${ctx} phase=${p} errors=${graph.errors.filter((e) => e.phase === p.id)} />`)}</div>
         <div className="row wrap add-phase">
           <select aria-label="Phase type" value=${newType} onChange=${(e) => setNewType(e.target.value)}>${types.map(([k, v]) => html`<option value=${k}>${v.label}</option>`)}</select>
@@ -205,6 +161,37 @@
       <//>
     </div>`;
   }
+  // ---------- schema of the three phase types: input → what it does → output ----------
+  const PHASE_SCHEMA = {
+    GROUPS: {
+      input: ['Teams: the team list, or places ticked from earlier phases', 'Settings: number of groups, distribution (snake, in order, manual, avoid rematches), games (everyone once, twice, or N per team), crossovers', 'Option: keep points and stats from the previous phase'],
+      does: ['Splits the teams into groups', 'Everyone plays the teams of their group', 'Ranks with the tiebreakers of the category'],
+      output: [['Pool ranking', '1st … last of each group'], ['Cross-pool ranking', '1st of 1sts, 2nd of 1sts … 1st of 2nds …'], ['Overall ranking', '1st … last of all teams (per-game averages)']],
+    },
+    KNOCKOUT: {
+      input: ['Teams in seed order: the team list, or places ticked from earlier phases', 'Settings: out after 1 or 2 losses; with 1: placement games (3rd, 5th, 7th) and consolations; with 2: bracket reset'],
+      does: ['Builds the bracket: seed 1 meets the lowest seed, byes go to the top seeds', 'Winners go on; losers are out (or drop to the lower bracket)'],
+      output: [['Final ranking', '1st, 2nd, then by round of elimination; same round ordered by tiebreakers, then seed']],
+    },
+    AMERICANO: {
+      input: ['Players: the player list, or places ticked from an earlier Americano (a multiple of 4)', 'Settings: points per game, number of rounds'],
+      does: ['Every round, players are paired with a new partner, 2 vs 2', 'Each player scores the points their side wins'],
+      output: [['Players ranking', '1st … last by points won. Into a knockout, players are paired 1st + last, 2nd + second-last…']],
+    },
+  };
+  function PhaseSchema({ sport }) {
+    const types = Object.keys(TE.PHASE_TYPES);
+    return html`<${Section} title="Phase types" sub="Every phase works the same way: it takes participants in, plays its games and gives back rankings. A later phase picks its participants from those rankings.">
+      <div className="schema">${types.map((t) => { const sc = PHASE_SCHEMA[t]; return html`<div key=${t} className="schema-row">
+        <div className="schema-box in"><div className="schema-tag">Input</div><ul>${sc.input.map((x) => html`<li>${x}</li>`)}</ul></div>
+        <div className="schema-arrow" aria-hidden="true">→</div>
+        <div className=${'schema-box phase t-' + t}><div className="schema-title">${TE.PHASE_TYPES[t].label}${t === 'AMERICANO' && !TE.SPORTS[sport].americano ? html` <${Pill}>padel and tennis only<//>` : null}</div><div className="schema-tag">What it does</div><ul>${sc.does.map((x) => html`<li>${x}</li>`)}</ul></div>
+        <div className="schema-arrow" aria-hidden="true">→</div>
+        <div className="schema-box out"><div className="schema-tag">Output</div><ul>${sc.output.map(([k, v]) => html`<li><b>${k}</b><br /><span className="muted small">${v}</span></li>`)}</ul></div>
+      </div>`; })}</div>
+    <//>`;
+  }
+
   // ---------- phase card: 1 who enters · 2 how they are distributed · 3 rankings it calculates ----------
   const RANKING_KINDS = {
     POOL: { label: 'Pool ranking', help: 'Places inside each group. “1-2” = the top two of every group.' },
