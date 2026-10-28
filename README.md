@@ -8,6 +8,7 @@ Formats: Round Robin, Single Elimination, Double Elimination, RR → SE, RR → 
 - **Repository:** https://github.com/emaalberti/tournament_creation_mockup (personal account for now; move it to the company organization with Settings → Transfer ownership)
 - **Live mockup:** https://claude.ai/artifact/6gBNiJyCoX3waWHxGzaHwh (private; share it from the page's Share menu)
 - **Spec:** [docs/SPEC.md](docs/SPEC.md), the source of truth for every rule and decision
+- **Composable phases (proposal):** [docs/PHASE-DESIGN.md](docs/PHASE-DESIGN.md), phases as black boxes linked by connectors, replacing fixed formats (in Italian)
 - **Porting guide:** [docs/PORTING.md](docs/PORTING.md), how to move this into turno-sport
 - **Research notes:** [docs/tourny-analysis/](docs/tourny-analysis/), what Tourny does, step by step
 
