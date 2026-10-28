@@ -1115,6 +1115,17 @@
     return n;
   }
 
+  // a blank event: no name, no sport, no categories (the organiser fills everything in)
+  function emptyState() {
+    return { version: 2, tournament: { name: '', sport: null, status: 'DRAFT', restMinutes: 0, scheduling: 'FIXED' }, categories: [], venues: [], schedule: { blocks: [], assignments: {}, unplaced: [], queue: [], courts: {}, auto: true, lastFinished: {} } };
+  }
+  // choosing the sport sets its defaults (rest, scheduling, points and tiebreakers of every category)
+  function setSport(state, sport) {
+    const sp = SPORTS[sport];
+    Object.assign(state.tournament, { sport, restMinutes: sp.rest, scheduling: sp.scheduling });
+    state.categories.forEach((c) => { c.format = defaultRules(sport); });
+  }
+
   // saved states from before double elimination became a knockout setting
   function migrateState(st) {
     for (const cat of st.categories || []) for (const p of cat.phases || []) {
@@ -1126,7 +1137,7 @@
   }
 
   const TE = {
-    migrateState, SPORTS, PHASE_TYPES, DISTRIBUTIONS, TEMPLATES, RULES, COLUMNS, DEFAULT_TIEBREAKERS, STATUS_LABEL,
+    emptyState, setSport, migrateState, SPORTS, PHASE_TYPES, DISTRIBUTIONS, TEMPLATES, RULES, COLUMNS, DEFAULT_TIEBREAKERS, STATUS_LABEL,
     templatesFor, rulesFor, defaultRules, uid, clone, ordinal, letter, parsePositions, formatPositions,
     newState, newCategory, findCat, findPhase, phaseGames, sortedPhases, connectorTo, sourcesOf, downstreamOf, isRoot,
     teamName, playerName, participantName, seededTeams, snakePools, circleRounds, poolPairs, seedOrder, americanoSchedule,

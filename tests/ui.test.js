@@ -28,10 +28,20 @@ let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', 
 
 (async () => {
   await sleep(100);
-  check(w.document.querySelector('.t-name').textContent === 'New tournament' && !btn('Reset example'), 'starts from an empty event, no example');
+  check(w.document.querySelector('.t-name').textContent === 'Untitled tournament' && w.document.getElementById('ev-name').value === '' && w.document.getElementById('ev-sport').value === '', 'starts completely empty: no name, no sport');
+  check($$('.nav-item').filter((b) => b.disabled).length === 9, 'everything except Event waits for a sport');
+  check(!main().includes('Start over') && !main().includes('settings'), 'no initial info on the Event page');
+  await setVal(w.document.getElementById('ev-name'), 'Spring Cup', 'name');
+  await setVal(w.document.getElementById('ev-sport'), 'FOOTBALL', 'sport');
+  check(!$$('.nav-item').some((b) => b.disabled) && w.document.querySelector('.t-name').textContent === 'Spring Cup', 'sport chosen: every page unlocked');
+  await go('Teams');
+  check(main().includes('Add a category first'), 'no category yet: per-category pages ask for one');
   const labels = $$('.nav-item').map((b) => b.querySelector('.nav-label').textContent.replace(' optional', ''));
   for (let i = 0; i < labels.length; i++) { await click($$('.nav-item')[i], labels[i]); if (!main().length) { fails++; console.log('FAIL empty view', labels[i]); } }
-  check(!errors.length, 'every view renders on an empty event');
+  check(!errors.length, 'every view renders with no category');
+  await go('Categories');
+  await setVal($$('input[aria-label="New category"]')[0], 'Open', 'category');
+  await click(btn('Add category'), 'add category');
 
   // ---- football: Pool Play -> A Flight + B Flight
   await go('Teams');
@@ -86,8 +96,10 @@ let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', 
 
   // ---- padel Americano -> pairs knockout
   await go('Event');
-  await setVal(w.document.getElementById('nt-sport'), 'PADEL', 'sport');
-  await click(btn('Create event'), 'create'); await click(btn('Create event', w.document.querySelector('.modal')), 'confirm create');
+  await click(btn('Clear everything'), 'clear'); await click(btn('Clear everything', w.document.querySelector('.modal')), 'confirm clear');
+  check(w.document.querySelector('.t-name').textContent === 'Untitled tournament' && $$('.nav-item').filter((b) => b.disabled).length === 9, 'Clear everything returns to the empty page');
+  await setVal(w.document.getElementById('ev-sport'), 'PADEL', 'sport padel');
+  await go('Categories'); await setVal($$('input[aria-label="New category"]')[0], 'Americano Night', 'cat'); await click(btn('Add category'), 'add cat');
   await go('Format'); await addPhase('AMERICANO', 'Americano');
   await go('Players');
   await setVal(w.document.getElementById('bulk'), ['Giulia', 'Marco', 'Sara', 'Luca', 'Elena', 'Paolo', 'Chiara', 'Davide'].join('\n'), 'players');

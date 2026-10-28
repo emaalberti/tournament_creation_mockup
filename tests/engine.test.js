@@ -149,5 +149,11 @@ for (const [n, k] of [[4, 2], [5, 2], [5, 3], [6, 3]]) {
   TE.migrateState(old); const m = old.categories[0].phases[0];
   assert(m.type === 'KNOCKOUT' && m.config.eliminations === 2 && m.config.bracketReset === false, 'old saved double-knockout phases are migrated'); }
 
+// --- empty start
+{ const st = TE.emptyState();
+  assert(st.tournament.name === '' && st.tournament.sport === null && st.categories.length === 0 && st.venues.length === 0, 'empty state: no name, sport, categories or venues');
+  st.categories.push(TE.newCategory('Open', 'FOOTBALL')); TE.setSport(st, 'VOLLEYBALL');
+  assert(st.tournament.restMinutes === 15 && st.categories[0].format.points.win === 2 && st.categories[0].format.bestOf === 3, 'choosing the sport sets its defaults'); }
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

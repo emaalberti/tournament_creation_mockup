@@ -50,7 +50,9 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .bar { height: 5px; background: var(--sunken); border-radius: 3px; overflow: hidden; } .bar span { display: block; height: 100%; background: var(--accent); }
 .side-sep { margin: 12px 10px 4px; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .nav-item { display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: none; color: inherit; padding: 8px 10px; border-radius: var(--r); cursor: pointer; width: 100%; }
-.nav-item:hover { background: var(--sunken); }
+.nav-item:hover:not(:disabled) { background: var(--sunken); }
+.nav-item:disabled { opacity: .45; cursor: not-allowed; }
+.t-name.empty { color: var(--muted); }
 .nav-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .check { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: .72rem; font-weight: 600; color: var(--muted); }
 .check.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }

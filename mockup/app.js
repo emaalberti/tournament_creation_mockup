@@ -3,12 +3,12 @@
   'use strict';
   const { useState, useEffect } = React;
   const html = htm.bind(React.createElement);
-  const STORE = 'tournament-mockup-v3';
+  const STORE = 'tournament-mockup-v4';
 
   // ---------- persistence ----------
   function load() {
     try { const s = localStorage.getItem(STORE); if (s) { const p = JSON.parse(s); if (p && p.version === 2) return TE.migrateState(p); } } catch (e) { /* storage unavailable */ }
-    return TE.newState('FOOTBALL', 'New tournament');
+    return TE.emptyState();
   }
   function save(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { /* ignore */ } }
 
@@ -36,45 +36,47 @@
   function App() {
     const [st, setSt] = useState(load);
     const [view, setView] = useState(() => { try { return localStorage.getItem(STORE + ':view') || 'format'; } catch (e) { return 'format'; } });
-    const [catId, setCatId] = useState(() => st.categories[0].id);
+    const [catId, setCatId] = useState(() => (st.categories[0] ? st.categories[0].id : null));
     const [modal, setModal] = useState(null);
     const [toast, setToast] = useState(null);
     const [, tick] = useState(0);
     useEffect(() => { try { localStorage.setItem(STORE + ':view', view); } catch (e) { /* ignore */ } }, [view]);
     useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 30000); return () => clearInterval(t); }, []);
 
-    const cat = TE.findCat(st, catId) || st.categories[0];
-    const sport = TE.SPORTS[st.tournament.sport];
-    function act(fn) { const d = TE.clone(st); const out = fn(d, TE.findCat(d, cat.id)); save(d); setSt(d); return out; }
+    const cat = TE.findCat(st, catId) || st.categories[0] || null;
+    const sport = st.tournament.sport ? TE.SPORTS[st.tournament.sport] : null;
+    function act(fn) { const d = TE.clone(st); const out = fn(d, cat ? TE.findCat(d, cat.id) : null); save(d); setSt(d); return out; }
     function say(msg, tone) { setToast({ msg, tone }); clearTimeout(say.t); say.t = setTimeout(() => setToast(null), 3800); }
     function ask(title, body, confirmText, fn, danger) {
       setModal(html`<${Modal} title=${title} onClose=${() => setModal(null)} footer=${html`<${Btn} kind="ghost" onClick=${() => setModal(null)}>Cancel<//><${Btn} kind=${danger ? 'danger' : 'primary'} onClick=${() => { setModal(null); fn(); }}>${confirmText}<//>`}><p>${body}</p><//>`);
     }
     const ctx = { st, cat, sport, act, say, ask, setModal, setView, setCatId };
-    const phases = TE.sortedPhases(cat);
-    const graph = TE.validateGraph(st, cat);
-
+    const phases = cat ? TE.sortedPhases(cat) : [];
+    const graph = cat ? TE.validateGraph(st, cat) : { errors: [], warnings: [] };
+    const teamsN = cat ? cat.teams.filter((t) => !t.fromAmericano).length : 0;
+    const pl = cat ? usesPlayers(cat) : false;
+    const noCat = 'Add a category first';
     const nav = [
-      { id: 'event', label: 'Event', done: true, info: `${sport.label} · ${st.tournament.status === 'PUBLISHED' ? 'Published' : 'Draft'}` },
-      { id: 'rules', label: 'Standings rules', done: true, info: 'Points, tiebreakers, columns', perCat: true },
-      { id: 'categories', label: 'Categories', done: true, optional: true, info: st.categories.map((c) => c.name).join(' · ') },
-      { id: 'teams', label: usesPlayers(cat) ? 'Players' : 'Teams', done: usesPlayers(cat) ? cat.players.length >= 4 : cat.teams.filter((t) => !t.fromAmericano).length >= 2, info: usesPlayers(cat) ? `${cat.players.length} players` : `${cat.teams.filter((t) => !t.fromAmericano).length} teams`, perCat: true },
-      { id: 'format', label: 'Format', done: phases.length > 0 && !graph.errors.length, info: phases.length ? phases.map((p) => p.name).join(' → ') : 'Build the phases', perCat: true },
-      { id: 'phases', label: 'Phase setup', done: phases.length > 0 && phases.every((p) => p.built), info: `${phases.filter((p) => p.built).length} of ${phases.length} ready`, perCat: true },
-      { id: 'venues', label: 'Venues', done: st.venues.length > 0, info: `${TE.allSpaces(st).length} ${sport.space[1]}` },
-      { id: 'schedule', label: 'Schedule', done: st.tournament.scheduling === 'QUEUE' ? Object.keys(st.schedule.courts).length > 0 : Object.keys(st.schedule.assignments).length > 0, info: st.tournament.scheduling === 'QUEUE' ? `Next available ${sport.space[0]}` : 'Fixed times' },
-      { id: 'games', label: 'Games & results', run: true, info: `${cat.games.filter((g) => g.status !== 'SCHEDULED').length}/${cat.games.length} played`, perCat: true },
-      { id: 'standings', label: 'Standings', run: true, info: 'Rankings, brackets, confirm phases', perCat: true },
-    ];
+      { id: 'event', label: 'Event', done: !!sport && !!st.tournament.name.trim(), info: sport ? `${sport.label} · ${st.tournament.status === 'PUBLISHED' ? 'Published' : 'Draft'}` : 'Name and sport' },
+      { id: 'categories', label: 'Categories', done: st.categories.length > 0, info: st.categories.length ? st.categories.map((c) => c.name).join(' · ') : 'None yet' },
+      { id: 'rules', label: 'Standings rules', done: !!cat, info: cat ? 'Points, tiebreakers, columns' : noCat, perCat: true },
+      { id: 'teams', label: pl ? 'Players' : 'Teams', done: pl ? cat.players.length >= 4 : teamsN >= 2, info: !cat ? noCat : pl ? `${cat.players.length} players` : `${teamsN} teams`, perCat: true },
+      { id: 'format', label: 'Format', done: phases.length > 0 && !graph.errors.length, info: !cat ? noCat : phases.length ? phases.map((p) => p.name).join(' → ') : 'No phases yet', perCat: true },
+      { id: 'phases', label: 'Phase setup', done: phases.length > 0 && phases.every((p) => p.built), info: !cat ? noCat : `${phases.filter((p) => p.built).length} of ${phases.length} ready`, perCat: true },
+      { id: 'venues', label: 'Venues', done: st.venues.length > 0, info: sport ? `${TE.allSpaces(st).length} ${sport.space[1]}` : '' },
+      { id: 'schedule', label: 'Schedule', done: st.tournament.scheduling === 'QUEUE' ? Object.keys(st.schedule.courts).length > 0 : Object.keys(st.schedule.assignments).length > 0, info: !sport ? '' : st.tournament.scheduling === 'QUEUE' ? `Next available ${sport.space[0]}` : 'Fixed times' },
+      { id: 'games', label: 'Games & results', run: true, info: cat ? `${cat.games.filter((g) => g.status !== 'SCHEDULED').length}/${cat.games.length} played` : noCat, perCat: true },
+      { id: 'standings', label: 'Standings', run: true, info: cat ? 'Rankings, brackets, confirm phases' : noCat, perCat: true },
+    ].map((n) => (sport || n.id === 'event' ? n : Object.assign(n, { locked: true, info: 'Choose a sport first' })));
     const setupItems = nav.filter((n) => !n.run && !n.optional);
     const doneCount = setupItems.filter((n) => n.done).length;
-    const cur = nav.find((n) => n.id === view) || nav[0];
+    const cur = nav.find((n) => n.id === view && !n.locked) || nav[0];
     const views = { event: EventView, rules: RulesView, categories: CategoriesView, teams: TeamsView, format: FormatView, phases: PhasesView, venues: VenuesView, schedule: ScheduleView, games: GamesView, standings: StandingsView };
     const View = views[cur.id];
 
     return html`<div className="app">
       <header className="topbar">
-        <div className="brand"><span className="dot" aria-hidden="true"></span><div><div className="t-name">${st.tournament.name}</div><div className="t-meta">${sport.label} · tournament engine mockup</div></div></div>
+        <div className="brand"><span className="dot" aria-hidden="true"></span><div><div className=${'t-name' + (st.tournament.name.trim() ? '' : ' empty')}>${st.tournament.name.trim() || 'Untitled tournament'}</div><div className="t-meta">${sport ? sport.label : 'No sport chosen'} · tournament engine mockup</div></div></div>
         <div className="row">
           <${Pill} tone=${st.tournament.status === 'PUBLISHED' ? 'good' : 'warn'}>${st.tournament.status === 'PUBLISHED' ? 'Published' : 'Draft'}<//>
         </div>
@@ -83,14 +85,15 @@
         <nav className="side" aria-label="Setup">
           <div className="progress"><div className="progress-label">Setup progress</div><div className="progress-num"><b>${doneCount}</b> of ${setupItems.length} complete</div><div className="bar"><span style=${{ width: (100 * doneCount) / setupItems.length + '%' }}></span></div></div>
           ${nav.map((n, i) => html`${n.id === 'games' ? html`<div className="side-sep">Run the event</div>` : null}
-            <button key=${n.id} className=${'nav-item' + (view === n.id ? ' active' : '')} onClick=${() => setView(n.id)}>
+            <button key=${n.id} className=${'nav-item' + (cur.id === n.id ? ' active' : '')} disabled=${n.locked} onClick=${() => setView(n.id)}>
               <span className=${'check' + (n.done && !n.run ? ' on' : '') + (n.run ? ' run' : '')} aria-hidden="true">${n.run ? '' : n.done ? '✓' : i + 1}</span>
               <span className="nav-text"><span className="nav-label">${n.label}${n.optional ? html` <em>optional</em>` : null}</span><span className="nav-info">${n.info}</span></span>
             </button>`)}
         </nav>
         <main className="main">
+          ${cur.perCat && !cat ? html`<${Section} title=${cur.label}><${Note}>Add a category first: teams, phases and standings belong to a category.<//><div className="row"><${Btn} kind="primary" onClick=${() => setView('categories')}>Go to Categories<//></div><//>` : html`
           ${cur.perCat ? html`<div className="cat-tabs" role="tablist" aria-label="Category">${st.categories.map((c) => html`<button key=${c.id} role="tab" aria-selected=${c.id === cat.id} className=${'cat-tab' + (c.id === cat.id ? ' on' : '')} onClick=${() => setCatId(c.id)}>${c.name}</button>`)}</div>` : null}
-          <${View} key=${cur.perCat ? cat.id : cur.id} ...${ctx} />
+          <${View} key=${cur.perCat ? cat.id : cur.id} ...${ctx} />`}
         </main>
       </div>
       ${modal}
@@ -101,33 +104,26 @@
   const resultsIn = (cat) => cat.games.filter((g) => g.result).length;
 
   // ---------- Event ----------
-  function EventView({ st, act, ask, say, setCatId }) {
-    const [sport, setSport] = useState(st.tournament.sport);
-    const [name, setName] = useState('');
+  function EventView({ st, act, ask, say, setCatId, setView }) {
     const t = st.tournament;
+    const locked = st.categories.some((c) => c.teams.length || c.players.length || c.phases.length);
+    const empty = !t.name && !t.sport && !st.categories.length && !st.venues.length;
     return html`<div className="stack">
       <${Section} title="Event" sub="Basics that apply to every category.">
         <div className="grid2">
-          <${Field} label="Name" id="ev-name"><input id="ev-name" value=${t.name} onChange=${(e) => act((d) => { d.tournament.name = e.target.value; })} /><//>
-          <${Field} label="Sport" id="ev-sport" hint="Fixed for this event. Start a new one to change it."><input id="ev-sport" value=${TE.SPORTS[t.sport].label} disabled /><//>
-          <${Field} label="Minimum rest between a team's games (minutes)" id="ev-rest" hint=${`Default for ${TE.SPORTS[t.sport].label}: ${TE.SPORTS[t.sport].rest} min. 0 turns it off.`}><input id="ev-rest" type="number" min="0" step="5" value=${t.restMinutes} onChange=${(e) => act((d) => { d.tournament.restMinutes = Math.max(0, +e.target.value || 0); })} /><//>
+          <${Field} label="Name" id="ev-name"><input id="ev-name" placeholder="Tournament name" value=${t.name} onChange=${(e) => act((d) => { d.tournament.name = e.target.value; })} /><//>
+          <${Field} label="Sport" id="ev-sport" hint=${locked ? 'Remove the teams, players and phases to change the sport.' : null}><select id="ev-sport" value=${t.sport || ''} disabled=${locked} onChange=${(e) => { act((d) => TE.setSport(d, e.target.value)); if (!st.categories.length) say('Sport set. Add a category next.'); }}>
+            <option value="" disabled>Choose a sport</option>${Object.entries(TE.SPORTS).map(([k, v]) => html`<option value=${k}>${v.label}</option>`)}</select><//>
+          ${t.sport ? html`<${Field} label="Minimum rest between a team's games (minutes)" id="ev-rest" hint=${`Default for ${TE.SPORTS[t.sport].label}: ${TE.SPORTS[t.sport].rest} min. 0 turns it off.`}><input id="ev-rest" type="number" min="0" step="5" value=${t.restMinutes} onChange=${(e) => act((d) => { d.tournament.restMinutes = Math.max(0, +e.target.value || 0); })} /><//>
           <${Field} label="Status" id="ev-status" hint="Results can be entered only after publishing.">
             <div className="row" id="ev-status"><${Pill} tone=${t.status === 'PUBLISHED' ? 'good' : 'warn'}>${t.status === 'PUBLISHED' ? 'Published' : 'Draft'}<//>
-            <${Btn} onClick=${() => act((d) => { d.tournament.status = d.tournament.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'; })}>${t.status === 'PUBLISHED' ? 'Back to draft' : 'Publish'}<//></div><//>
+            <${Btn} onClick=${() => act((d) => { d.tournament.status = d.tournament.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'; })}>${t.status === 'PUBLISHED' ? 'Back to draft' : 'Publish'}<//></div><//>` : null}
         </div>
       <//>
-      <${Section} title="Start a new tournament" sub="Creates an empty event for another sport. The current event is replaced.">
-        <div className="grid2">
-          <${Field} label="Name" id="nt-name"><input id="nt-name" placeholder="e.g. Summer Futsal Cup" value=${name} onChange=${(e) => setName(e.target.value)} /><//>
-          <${Field} label="Sport" id="nt-sport"><select id="nt-sport" value=${sport} onChange=${(e) => setSport(e.target.value)}>${Object.entries(TE.SPORTS).map(([k, v]) => html`<option value=${k}>${v.label}</option>`)}</select><//>
-        </div>
-        <div className="row"><${Btn} kind="primary" onClick=${() => ask('Replace the current event?', 'All categories, teams, phases and results of the current event will be removed.', 'Create event', () => {
-          const s = TE.newState(sport, name.trim() || `${TE.SPORTS[sport].label} tournament`);
-          act((d) => { Object.keys(d).forEach((k) => delete d[k]); Object.assign(d, s); });
-          setCatId(s.categories[0].id); say('New event created. Add teams, then build the format.');
-        }, true)}>Create event<//></div>
-      <//>
-      <${SportCard} sport=${t.sport} />
+      ${t.sport ? html`<${SportCard} sport=${t.sport} />` : null}
+      ${empty ? null : html`<${Section} title="Start over" sub="Removes the name, sport, categories, teams, phases, venues and results.">
+        <div className="row"><${Btn} kind="danger" onClick=${() => ask('Clear everything?', 'The whole event is removed and you start from an empty page.', 'Clear everything', () => { act((d) => { Object.keys(d).forEach((k) => delete d[k]); Object.assign(d, TE.emptyState()); }); setCatId(null); say('Everything cleared.'); }, true)}>Clear everything<//></div>
+      <//>`}
     </div>`;
   }
   function SportCard({ sport }) {
@@ -405,7 +401,7 @@
       <ul className="list">${st.categories.map((c) => html`<li key=${c.id} className="list-row">
         <input aria-label="Category name" value=${c.name} onChange=${(e) => act((d) => { TE.findCat(d, c.id).name = e.target.value; })} />
         <span className="muted">${c.teams.filter((t) => !t.fromAmericano).length} teams · ${c.players.length} players · ${c.phases.length} phases · ${c.games.length} games</span>
-        <${Btn} kind="ghost" disabled=${st.categories.length === 1} onClick=${() => ask(`Delete ${c.name}?`, 'Its teams, phases and games are removed.', 'Delete', () => { act((d) => { d.categories = d.categories.filter((x) => x.id !== c.id); }); setCatId(st.categories.find((x) => x.id !== c.id).id); }, true)}>Delete<//>
+        <${Btn} kind="ghost" onClick=${() => ask(`Delete ${c.name}?`, 'Its teams, phases and games are removed.', 'Delete', () => { act((d) => { d.categories = d.categories.filter((x) => x.id !== c.id); }); const other = st.categories.find((x) => x.id !== c.id); setCatId(other ? other.id : null); }, true)}>Delete<//>
       </li>`)}</ul>
       <form className="row" onSubmit=${(e) => { e.preventDefault(); if (!name.trim()) return; const c = TE.newCategory(name.trim(), st.tournament.sport); act((d) => { d.categories.push(c); }); setName(''); setCatId(c.id); say(`${c.name} created.`); }}>
         <input aria-label="New category" placeholder="New category name" value=${name} onChange=${(e) => setName(e.target.value)} /><button className="btn primary" type="submit">Add category</button>
