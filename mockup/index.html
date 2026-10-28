@@ -181,6 +181,13 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .step-head b { font: 600 1.02rem var(--display); }
 .step-no { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; font-size: .78rem; font-weight: 700; flex: none; }
 .add-sel { display: grid; gap: 8px; padding: 10px; border: 1px dashed var(--btn-secondary-line); border-radius: 7px; background: var(--accent-soft); }
+.rank-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.rank-col { display: grid; gap: 4px; align-content: start; }
+.rank-col-head { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.pick { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.pick.on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.pick.taken:not(.on) { opacity: .6; }
+.pick-label { font-weight: 600; }
 .rank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .rank-list li { display: grid; gap: 2px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
 @media (max-width: 860px) { .step { border-right: 0; border-bottom: 1px solid var(--line); } }

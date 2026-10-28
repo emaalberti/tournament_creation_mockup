@@ -224,6 +224,46 @@
     if (s.ranking === 'final') return ['Final ranking', `places ${pos}`];
     return [p.type === 'AMERICANO' ? 'Players ranking' : 'Overall ranking', `places ${pos}`];
   }
+  // every place of a ranking, one row each: the list the organiser ticks in step 1
+  function rankingItems(cat, src, kind) {
+    const name = (rid, pos) => { const id = src.snapshot && src.snapshot[rid] && src.snapshot[rid][pos - 1]; return id ? TE.participantName(cat, src, id) : null; };
+    const item = (rid, pos, label, group) => ({ key: `${rid}|${pos}`, ranking: rid, pos, label, group, who: name(rid, pos) });
+    if (kind === 'POOL') return src.pools.flatMap((p) => p.ids.map((_, i) => item(`pool:${p.number}`, i + 1, `${TE.ordinal(i + 1)} ${p.name}`, p.name)));
+    if (kind === 'CROSS') {
+      const max = Math.max(0, ...src.pools.map((p) => p.ids.length)), out = [];
+      for (let k = 1; k <= max; k++) { const n = src.pools.filter((p) => p.ids.length >= k).length; for (let j = 1; j <= n; j++) out.push(item(`cross:${k}`, j, `${TE.ordinal(j)} of ${TE.ordinal(k)}s`, `${TE.ordinal(k)}-placed teams`)); }
+      return out;
+    }
+    const rid = kind === 'FINAL' ? 'final' : 'overall';
+    return src.entrants.map((_, i) => item(rid, i + 1, i === src.entrants.length - 1 && i > 0 ? `${TE.ordinal(i + 1)} (last)` : TE.ordinal(i + 1), null));
+  }
+  const kindOfRanking = (rid, src) => (rid.startsWith('pool:') ? 'POOL' : rid.startsWith('cross:') ? 'CROSS' : rid === 'final' ? 'FINAL' : src.type === 'AMERICANO' ? 'PLAYERS' : 'OVERALL');
+  function selectorKeys(src, sels) {
+    const keys = new Set();
+    sels.filter((s) => s.fromPhase === src.id).forEach((s) => {
+      const rids = s.ranking === 'pool:*' ? src.pools.map((p) => `pool:${p.number}`) : [s.ranking];
+      rids.forEach((rid) => s.positions.forEach((pos) => keys.add(`${rid}|${pos}`)));
+    });
+    return keys;
+  }
+  // ticked rows -> selectors (same places in every group are saved as "every group")
+  function keysToSelectors(src, keys) {
+    const by = {};
+    [...keys].forEach((k) => { const [rid, pos] = k.split('|'); (by[rid] = by[rid] || []).push(+pos); });
+    Object.values(by).forEach((a) => a.sort((x, y) => x - y));
+    const out = [];
+    const pools = src.pools.map((p) => `pool:${p.number}`);
+    const poolSel = pools.filter((r) => by[r]);
+    if (poolSel.length) {
+      const union = [...new Set(poolSel.flatMap((r) => by[r]))].sort((a, b) => a - b);
+      const every = src.pools.every((p) => { const want = union.filter((x) => x <= p.ids.length); const got = by[`pool:${p.number}`] || []; return want.length === got.length && want.every((x, i) => x === got[i]); });
+      if (every) out.push({ fromPhase: src.id, ranking: 'pool:*', positions: union });
+      else poolSel.forEach((r) => out.push({ fromPhase: src.id, ranking: r, positions: by[r] }));
+    }
+    Object.keys(by).filter((r) => r.startsWith('cross:')).sort((a, b) => +a.slice(6) - +b.slice(6)).forEach((r) => out.push({ fromPhase: src.id, ranking: r, positions: by[r] }));
+    ['overall', 'final'].forEach((r) => { if (by[r]) out.push({ fromPhase: src.id, ranking: r, positions: by[r] }); });
+    return out;
+  }
   // what a new phase takes by default from the phase before it: everyone, in ranking order
   function defaultConnector(cat, prev, type) {
     const n = Math.max(prev.entrants.length, 2);
@@ -240,17 +280,19 @@
     const [from, setFrom] = useState(earlier.length ? earlier[earlier.length - 1].id : '');
     const src = earlier.find((p) => p.id === from);
     const kinds = src ? kindsFor(src) : [];
-    const [kindSel, setKind] = useState('POOL');
-    const kind = kinds.includes(kindSel) ? kindSel : kinds[0];
-    const [poolSel, setPoolSel] = useState('*');
-    const [k, setK] = useState(1);
-    const [posText, setPosText] = useState(null);
-    const defaultPos = kind === 'POOL' ? '1-2' : kind === 'CROSS' ? '1' : src ? `1-${Math.max(src.entrants.length, 1)}` : '1';
-    const pos = posText == null ? defaultPos : posText;
-    const ranking = kind === 'POOL' ? (poolSel === '*' ? 'pool:*' : `pool:${poolSel}`) : kind === 'CROSS' ? `cross:${k}` : kind === 'FINAL' ? 'final' : 'overall';
-    const draft = src && TE.parsePositions(pos).length ? { fromPhase: src.id, ranking, positions: TE.parsePositions(pos) } : null;
-    const draftCount = draft ? TE.expandConnector(cat, { selectors: [draft], seeding: 'SELECTOR_ORDER' }).length : 0;
-    const maxRank = src && src.type === 'GROUPS' ? Math.max(1, ...src.pools.map((p) => p.ids.length)) : 1;
+    const [kindSel, setKind] = useState(null);
+    const savedKind = src && selectors.find((x) => x.fromPhase === src.id) ? kindOfRanking(selectors.find((x) => x.fromPhase === src.id).ranking, src) : null;
+    const kind = kinds.includes(kindSel) ? kindSel : kinds.includes(savedKind) ? savedKind : kinds[0];
+    const saved = src ? selectorKeys(src, selectors) : new Set();
+    const [draft, setDraft] = useState(null);
+    const ticked = draft || saved;
+    const items = src ? rankingItems(cat, src, kind) : [];
+    const taken = {};
+    if (src) cat.connectors.filter((c) => c.to !== phase.id).forEach((c) => selectorKeys(src, c.selectors).forEach((k) => { taken[k] = (TE.findPhase(cat, c.to) || {}).name; }));
+    const dirty = src && (ticked.size !== saved.size || [...ticked].some((x) => !saved.has(x)));
+    const toggle = (key) => { const nx = new Set(ticked); nx.has(key) ? nx.delete(key) : nx.add(key); setDraft(nx); };
+    const setMany = (keys, on) => { const nx = new Set(ticked); keys.forEach((x) => (on ? nx.add(x) : nx.delete(x))); setDraft(nx); };
+    const groupsOf = [...new Set(items.map((x) => x.group))];
     const saveConn = (sels, extra) => guard('Change who enters this phase', () => act((d, c) => {
       const old = TE.connectorTo(c, phase.id);
       const fromPl = sels.some((s) => { const p = TE.findPhase(c, s.fromPhase); return p && TE.PHASE_TYPES[p.type].kind === 'PLAYER'; }) && TE.PHASE_TYPES[phase.type].kind === 'TEAM';
@@ -275,20 +317,24 @@
             <button role="radio" aria-checked=${fromPhases} className=${fromPhases ? 'on' : ''} onClick=${() => !fromPhases && guard('Change who enters this phase', () => act((d, c) => { c.connectors = c.connectors.filter((x) => x.to !== phase.id); c.connectors.push(Object.assign(defaultConnector(c, TE.sortedPhases(c).filter((p) => p.order < phase.order).pop(), phase.type), { to: phase.id })); TE.rebuildPhase(d, c, TE.findPhase(c, phase.id)); }))}>Places from earlier phases</button>
           </div>` : null}
           ${!fromPhases ? html`<p className="muted">All ${n} ${kindLabel} of ${cat.name}, by seed.</p>` : html`
-            <ul className="sel-list">${selectors.map((s, i) => { const [kl, detail] = describeSelector(cat, s); return html`<li key=${i}><span><b>${kl}</b> · ${detail} <span className="muted">of ${(TE.findPhase(cat, s.fromPhase) || {}).name}</span></span><button className="icon-btn" aria-label="Remove" onClick=${() => saveConn(selectors.filter((_, x) => x !== i))}>×</button></li>`; })}</ul>
+            ${selectors.length ? html`<ul className="sel-list">${selectors.map((x, i) => { const [kl, detail] = describeSelector(cat, x); return html`<li key=${i}><span><b>${kl}</b> · ${detail} <span className="muted">of ${(TE.findPhase(cat, x.fromPhase) || {}).name}</span></span></li>`; })}</ul>` : html`<p className="muted">Nobody selected yet.</p>`}
             <div className="add-sel">
               <div className="row wrap">
-                <label className="row" htmlFor=${'fr-' + phase.id}><span className="field-label">From</span><select id=${'fr-' + phase.id} aria-label="From phase" value=${from} onChange=${(e) => { setFrom(e.target.value); setPosText(null); }}>${earlier.map((p) => html`<option value=${p.id}>${p.name}</option>`)}</select></label>
-                <div className="seg" role="radiogroup" aria-label="Ranking">${kinds.map((kk) => html`<button key=${kk} role="radio" aria-checked=${kind === kk} className=${kind === kk ? 'on' : ''} onClick=${() => { setKind(kk); setPosText(null); }}>${RANKING_KINDS[kk].label}</button>`)}</div>
+                <label className="row" htmlFor=${'fr-' + phase.id}><span className="field-label">From</span><select id=${'fr-' + phase.id} aria-label="From phase" value=${from} onChange=${(e) => { setFrom(e.target.value); setKind(null); setDraft(null); }}>${earlier.map((p) => html`<option value=${p.id}>${p.name}</option>`)}</select></label>
+                <div className="seg" role="radiogroup" aria-label="Ranking">${kinds.map((kk) => html`<button key=${kk} role="radio" aria-checked=${kind === kk} className=${kind === kk ? 'on' : ''} onClick=${() => setKind(kk)}>${RANKING_KINDS[kk].label}</button>`)}</div>
               </div>
-              <div className="row wrap">
-                ${kind === 'POOL' ? html`<select aria-label="Which groups" value=${poolSel} onChange=${(e) => setPoolSel(e.target.value)}><option value="*">Every group</option>${src.pools.map((p) => html`<option value=${p.number}>${p.name} only</option>`)}</select>` : null}
-                ${kind === 'CROSS' ? html`<label className="row" htmlFor=${'k-' + phase.id}><span>Among the</span><select id=${'k-' + phase.id} aria-label="Placed" value=${k} onChange=${(e) => setK(+e.target.value)}>${Array.from({ length: maxRank }, (_, i) => html`<option value=${i + 1}>${TE.ordinal(i + 1)}-placed</option>`)}</select></label>` : null}
-                <label className="row" htmlFor=${'ps-' + phase.id}><span>Places</span><input id=${'ps-' + phase.id} aria-label="Positions" className="pos-input" value=${pos} onChange=${(e) => setPosText(e.target.value)} placeholder="1-4, 6" /></label>
-                <${Btn} disabled=${!draft || !draftCount} onClick=${() => { saveConn([...selectors, draft]); setPosText(null); }}>Add places<//>
-                <span className="muted small">${draft ? `= ${draftCount} ${kindLabel}` : 'Write places like 1-2 or 1, 3'}</span>
+              <p className="hint">${RANKING_KINDS[kind] ? RANKING_KINDS[kind].help : ''} Tick the places that enter ${phase.name}.</p>
+              <div className="row wrap"><${Btn} kind="ghost" onClick=${() => setMany(items.filter((x) => !taken[x.key]).map((x) => x.key), true)}>Select all free<//><${Btn} kind="ghost" onClick=${() => setMany(items.map((x) => x.key), false)}>Clear this list<//></div>
+              <div className="rank-pick">${groupsOf.map((g) => html`<div key=${g || 'all'} className="rank-col">${g ? html`<div className="rank-col-head">${g}</div>` : null}
+                ${items.filter((x) => x.group === g).map((x) => html`<label key=${x.key} className=${'pick' + (ticked.has(x.key) ? ' on' : '') + (taken[x.key] ? ' taken' : '')}>
+                  <input type="checkbox" checked=${ticked.has(x.key)} onChange=${() => toggle(x.key)} />
+                  <span className="pick-label">${x.label}</span>${x.who ? html`<span className="muted small">${x.who}</span>` : null}
+                  ${taken[x.key] ? html`<span className="pill">in ${taken[x.key]}</span>` : null}</label>`)}</div>`)}</div>
+              <div className="row">
+                <${Btn} kind="primary" disabled=${!dirty || !(selectors.filter((x) => x.fromPhase !== src.id).length + keysToSelectors(src, ticked).length)} onClick=${() => { const others = selectors.filter((x) => x.fromPhase !== src.id); saveConn([...others, ...keysToSelectors(src, ticked)]); setDraft(null); }}>Save selection<//>
+                ${dirty ? html`<${Btn} kind="ghost" onClick=${() => setDraft(null)}>Discard changes<//>` : null}
+                <span className="muted small">${[...ticked].length} selected from ${src ? src.name : ''}${dirty ? ' · not saved yet' : ''}</span>
               </div>
-              <p className="hint">${RANKING_KINDS[kind] ? RANKING_KINDS[kind].help : ''}</p>
             </div>
             ${phase.type === 'GROUPS' ? html`<label className="check-item"><input type="checkbox" checked=${phase.inheritPoints} onChange=${(e) => upd({ inheritPoints: e.target.checked }, 'Change carried-over points')} /> Keep points and stats from the previous phase</label>` : null}
             ${conn.transform === 'PAIRS' ? html`<${Pill} tone="accent">Players are paired 1st + last, 2nd + second-last…<//>` : null}`}

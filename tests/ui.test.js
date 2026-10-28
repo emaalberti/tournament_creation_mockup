@@ -41,12 +41,32 @@ let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', 
   const kinds = $$('[aria-label="Ranking"] button', card).map((b) => b.textContent);
   check(kinds.join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'from a groups phase: Pool, Cross-pool, Overall ranking');
   check($$('.rank-list li', card).map((l) => l.querySelector('b').textContent).join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'step 3 lists the rankings this phase calculates');
-  // pick 1st of every group -> overlaps A Flight -> error
-  await setVal(card.querySelector('input[aria-label="Positions"]'), '1');
-  await click(btn('Add places', card), 'add pool 1st');
+  // each ranking shows its full list of places (10 teams in Pool Play: groups of 4, 3, 3)
+  const rows = () => $$('.rank-pick .pick-label', $$('.phase-card').pop()).map((x) => x.textContent);
+  const pickKind = async (label) => click($$('[aria-label="Ranking"] button', $$('.phase-card').pop()).find((b) => b.textContent === label), label);
+  await pickKind('Cross-pool ranking');
+  check(rows().length === 10 && rows()[0] === '1st of 1sts' && rows()[1] === '2nd of 1sts' && rows()[9] === '1st of 4ths', 'cross-pool list: 1st of 1sts … 1st of 4ths (10 rows): ' + rows().join(','));
+  await pickKind('Overall ranking');
+  check(rows().length === 10 && rows()[0] === '1st' && rows()[9] === '10th (last)', 'overall list: 1st … 10th (last)');
+  await pickKind('Pool ranking');
+  check(rows().length === 10 && rows()[0] === '1st Group A', 'pool list: every place of every group (10 rows)');
+  check($$('.pick.taken', $$('.phase-card').pop()).length === 10, 'places already used by the flights are marked (all 10)');
+  // tick 1st Group A (already in A Flight) -> save -> error
+  const pick = (label) => $$('.pick', $$('.phase-card').pop()).find((l) => l.querySelector('.pick-label').textContent === label).querySelector('input');
+  await click(pick('1st Group A'), 'tick');
+  check(main().includes('not saved yet'), 'ticking shows unsaved selection');
+  await click(btn('Save selection', $$('.phase-card').pop()), 'save');
   check(main().includes('used twice'), 'builder shows the "used twice" error');
-  await click($$('.sel-list button', $$('.phase-card').pop()).pop(), 'remove bad selector');
-  check(main().includes('The format is valid'), 'error gone after removing the selector');
+  await click(pick('1st Group A'), 'untick');
+  await click(btn('Save selection', $$('.phase-card').pop()), 'save again');
+  check(main().includes('The format is valid'), 'error gone after unticking');
+  // from A Flight: the final ranking list, tick the 5th place
+  const fromSel = $$('.phase-card').pop().querySelector('select[aria-label="From phase"]');
+  await setVal(fromSel, $$('option', fromSel).find((o) => o.textContent === 'A Flight').value);
+  check(rows().length === 6 && rows()[0] === '1st' && rows()[5] === '6th (last)', 'A Flight final ranking: 1st … 6th (last)');
+  await click(pick('5th'), 'tick 5th');
+  await click(btn('Save selection', $$('.phase-card').pop()), 'save 5th');
+  check($$('.phase-card').pop().textContent.includes('Final ranking · places 5 of A Flight') && main().includes('The format is valid'), 'ticked place saved as a selection');
   // switch distribution in step 2
   card = $$('.phase-card').pop();
   await setVal(card.querySelector('select[aria-label="Distribution"]') || $$('select', card).find((x) => x.id.startsWith('dd-')), 'AVOID_REMATCH');
