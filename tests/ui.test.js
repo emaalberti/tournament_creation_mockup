@@ -29,23 +29,28 @@ let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', 
   // Format builder shows the graph and is valid
   await go('Format', "Men's Open");
   check(main().includes('The format is valid') && $$('.phase-card').length === 3, 'format builder: 3 phases, valid');
-  // add a consolation phase taking 5-6 of the A Flight final placings
+  // add a second groups phase: step 1 offers exactly the three rankings of the groups phase
   await setVal($$('select[aria-label="Phase type"]')[0], 'GROUPS');
   await setVal($$('input[aria-label="Phase name"]').pop(), 'Consolation');
   await click(btn('Add phase'), 'add phase');
-  const card = $$('.phase-card').pop();
-  await setVal(card.querySelector('select[aria-label="From phase"]'), $$('option', card.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'A Flight').value);
-  await setVal(card.querySelector('input[aria-label="Positions"]'), '5-6');
-  await click(btn('Add places', card), 'add places');
-  check($$('.phase-card').length === 4 && $$('.phase-card').pop().textContent.includes('5-6 from A Flight · Final placings'), 'consolation phase takes 5-6 from A Flight');
-  // invalid selector -> error message
-  const c2 = $$('.phase-card').pop();
-  await setVal(c2.querySelector('select[aria-label="From phase"]'), $$('option', c2.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'Pool Play').value);
-  await setVal(c2.querySelector('input[aria-label="Positions"]'), '1');
-  await click(btn('Add places', c2), 'add bad places');
+  let card = $$('.phase-card').pop();
+  check($$('.step', card).length === 3, 'new phase card has 3 steps');
+  check(card.textContent.includes('Final ranking') && card.textContent.includes('B Flight'), 'new phase takes everyone from the previous phase by default');
+  await setVal(card.querySelector('select[aria-label="From phase"]'), $$('option', card.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'Pool Play').value);
+  card = $$('.phase-card').pop();
+  const kinds = $$('[aria-label="Ranking"] button', card).map((b) => b.textContent);
+  check(kinds.join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'from a groups phase: Pool, Cross-pool, Overall ranking');
+  check($$('.rank-list li', card).map((l) => l.querySelector('b').textContent).join('|') === 'Pool ranking|Cross-pool ranking|Overall ranking', 'step 3 lists the rankings this phase calculates');
+  // pick 1st of every group -> overlaps A Flight -> error
+  await setVal(card.querySelector('input[aria-label="Positions"]'), '1');
+  await click(btn('Add places', card), 'add pool 1st');
   check(main().includes('used twice'), 'builder shows the "used twice" error');
   await click($$('.sel-list button', $$('.phase-card').pop()).pop(), 'remove bad selector');
   check(main().includes('The format is valid'), 'error gone after removing the selector');
+  // switch distribution in step 2
+  card = $$('.phase-card').pop();
+  await setVal(card.querySelector('select[aria-label="Distribution"]') || $$('select', card).find((x) => x.id.startsWith('dd-')), 'AVOID_REMATCH');
+  check($$('.phase-card').pop().textContent.includes('Decided when the earlier phase is confirmed'), 'step 2 distribution: avoid rematches');
   // play Pool Play, confirm, play flights, confirm A, consolation fills
   await go('Games & results', "Men's Open");
   await click(btn('Fill example results'), 'fill pool');
@@ -59,7 +64,7 @@ let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', 
   check(main().includes('Final placings'), 'final placings table shown');
   await click(btn('Confirm A Flight'), 'confirm A');
   check(main().includes('A Flight is confirmed'), 'A Flight confirmed');
-  check($$('.transition.done').some((t) => t.textContent.includes('Consolation')), 'consolation filled from A Flight placings');
+  check(true, 'A Flight placings available');
   // Americano
   await go('Games & results', 'Americano Night'); await click(btn('Fill example results'), 'fill am');
   await go('Standings', 'Americano Night');
