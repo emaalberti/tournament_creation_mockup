@@ -1,5 +1,6 @@
+// Clicks through the mockup in jsdom. Usage: node ui2.js <deps dir with node_modules> <mockup dir>
 const path = require('path'), fs = require('fs');
-const deps = path.join(__dirname, '..'), mock = path.join(__dirname, '../mockup');
+const deps = process.argv[2] || path.join(__dirname, '..'), mock = process.argv[3] || path.join(__dirname, '../mockup');
 const { JSDOM } = require(path.join(deps, 'node_modules/jsdom'));
 const dom = new JSDOM('<!doctype html><div id="root"></div>', { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.test/' });
 const w = dom.window; const errors = [];
@@ -9,52 +10,76 @@ for (const f of ['react/umd/react.production.min.js', 'react-dom/umd/react-dom.p
 w.eval(fs.readFileSync(path.join(mock, 'engine.js'), 'utf8'));
 w.eval(fs.readFileSync(path.join(mock, 'app.js'), 'utf8'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const $$ = (s) => [...w.document.querySelectorAll(s)];
-const btn = (text, root) => [...(root || w.document).querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text));
-const click = async (el) => { if (!el) throw new Error('missing element'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); await sleep(30); };
-const text = () => w.document.querySelector('.main').textContent;
+const $$ = (s, root) => [...(root || w.document).querySelectorAll(s)];
+const btn = (text, root) => $$('button', root).find((b) => b.textContent.trim().startsWith(text) && !b.disabled);
+const click = async (el, what) => { if (!el) throw new Error('missing element: ' + what); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); await sleep(25); };
+const setVal = async (el, v) => { const proto = el.tagName === 'SELECT' ? w.HTMLSelectElement.prototype : w.HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v); el.dispatchEvent(new w.Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); await sleep(25); };
+const main = () => w.document.querySelector('.main').textContent;
+const go = async (label, cat) => { await click($$('.nav-item').find((b) => b.querySelector('.nav-label').textContent.replace(' optional', '') === label), label); if (cat) await click($$('.cat-tab').find((b) => b.textContent === cat), cat); };
+let fails = 0; const check = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console.log('ok  ', m); };
 (async () => {
   await sleep(100);
-  const navs = $$('.nav-item').map((b) => b.querySelector('.nav-label').textContent);
-  console.log('nav:', navs.join(' | '));
-  for (const cat of ["Men's Open", 'Americano Night']) {
-    for (let i = 0; i < navs.length; i++) { const n = navs[i];
-      await click($$('.nav-item')[i]);
-      const tab = $$('.cat-tab').find((b) => b.textContent === cat); if (tab) await click(tab);
-      const t = text(); console.log(`  [${cat}] ${n}: ${t.length} chars`);
-    }
+  const labels = $$('.nav-item').map((b) => b.querySelector('.nav-label').textContent.replace(' optional', ''));
+  console.log('nav:', labels.join(' | '));
+  for (const cat of ["Men's Open", 'Americano Night']) for (let i = 0; i < labels.length; i++) {
+    await click($$('.nav-item')[i], labels[i]); const t = $$('.cat-tab').find((b) => b.textContent === cat); if (t) await click(t, cat);
+    if (!main().length) { fails++; console.log('FAIL empty view', cat, labels[i]); }
   }
-  // Flow: Men's Open -> games -> fill pool results -> standings -> resolve ties -> confirm -> fill A flight
-  const go = async (n, cat) => { await click($$('.nav-item').find((b) => b.querySelector('.nav-label').textContent === n)); if (cat) await click($$('.cat-tab').find((b) => b.textContent === cat)); };
+  check(!errors.length, 'every view renders for both categories');
+  // Format builder shows the graph and is valid
+  await go('Format', "Men's Open");
+  check(main().includes('The format is valid') && $$('.phase-card').length === 3, 'format builder: 3 phases, valid');
+  // add a consolation phase taking 5-6 of the A Flight final placings
+  await setVal($$('select[aria-label="Phase type"]')[0], 'GROUPS');
+  await setVal($$('input[aria-label="Phase name"]').pop(), 'Consolation');
+  await click(btn('Add phase'), 'add phase');
+  const card = $$('.phase-card').pop();
+  await setVal(card.querySelector('select[aria-label="From phase"]'), $$('option', card.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'A Flight').value);
+  await setVal(card.querySelector('input[aria-label="Positions"]'), '5-6');
+  await click(btn('Add places', card), 'add places');
+  check($$('.phase-card').length === 4 && $$('.phase-card').pop().textContent.includes('5-6 from A Flight · Final placings'), 'consolation phase takes 5-6 from A Flight');
+  // invalid selector -> error message
+  const c2 = $$('.phase-card').pop();
+  await setVal(c2.querySelector('select[aria-label="From phase"]'), $$('option', c2.querySelector('select[aria-label="From phase"]')).find((o) => o.textContent === 'Pool Play').value);
+  await setVal(c2.querySelector('input[aria-label="Positions"]'), '1');
+  await click(btn('Add places', c2), 'add bad places');
+  check(main().includes('used twice'), 'builder shows the "used twice" error');
+  await click($$('.sel-list button', $$('.phase-card').pop()).pop(), 'remove bad selector');
+  check(main().includes('The format is valid'), 'error gone after removing the selector');
+  // play Pool Play, confirm, play flights, confirm A, consolation fills
   await go('Games & results', "Men's Open");
-  await click(btn('Fill example results'));
+  await click(btn('Fill example results'), 'fill pool');
   await go('Standings', "Men's Open");
-  console.log('  transition:', w.document.querySelector('.transition').textContent.slice(0, 220));
-  for (let i = 0; i < 10 && btn('Keep this order'); i++) await click(btn('Keep this order'));
-  await click(btn('Confirm bracket'));
-  console.log('  after confirm:', w.document.querySelector('.transition').textContent.slice(0, 200));
+  for (let i = 0; i < 12 && btn('Keep this order'); i++) await click(btn('Keep this order'), 'keep order');
+  await click(btn('Confirm Pool Play'), 'confirm pool');
+  check(main().includes('Pool Play is confirmed'), 'Pool Play confirmed');
   await go('Games & results', "Men's Open");
-  for (const b of $$('button').filter((b) => b.textContent.startsWith('Fill example results') && !b.disabled)) await click(b);
-  const finals = $$('.game').filter((g) => g.querySelector('.g-side.win')).length;
-  console.log('  games with a winner:', finals, 'of', $$('.game').length);
-  // result modal on a pool game -> warns reset
+  for (let i = 0; i < 4; i++) { const b = btn('Fill example results'); if (b) await click(b, 'fill'); }
   await go('Standings', "Men's Open");
+  check(main().includes('Final placings'), 'final placings table shown');
+  await click(btn('Confirm A Flight'), 'confirm A');
+  check(main().includes('A Flight is confirmed'), 'A Flight confirmed');
+  check($$('.transition.done').some((t) => t.textContent.includes('Consolation')), 'consolation filled from A Flight placings');
   // Americano
-  await go('Games & results', 'Americano Night'); await click(btn('Fill example results'));
+  await go('Games & results', 'Americano Night'); await click(btn('Fill example results'), 'fill am');
   await go('Standings', 'Americano Night');
-  for (let i = 0; i < 10 && btn('Keep this order'); i++) await click(btn('Keep this order'));
-  await click(btn('Confirm bracket'));
-  console.log('  americano:', w.document.querySelector('.transition').textContent.slice(0, 160));
-  // open a result modal in queue schedule
-  await go('Schedule');
-  const enter = btn('Enter result'); console.log('  courts busy:', $$('.court.busy').length);
-  if (enter) { await click(enter); console.log('  modal:', w.document.querySelector('.modal-head').textContent); }
-  // Format change on a new sport
+  for (let i = 0; i < 6 && btn('Keep this order'); i++) await click(btn('Keep this order'), 'keep');
+  await click(btn('Confirm Americano'), 'confirm am');
+  check(main().includes('Americano is confirmed') && main().includes(' / '), 'americano confirmed; playoff pairs created');
+  // New event + 3-stage preset
   await go('Event');
-  w.document.getElementById('nt-sport').value = 'VOLLEYBALL';
-  w.document.getElementById('nt-sport').dispatchEvent(new w.Event('change', { bubbles: true })); await sleep(30);
-  await click(btn('Create event')); await click(btn('Create event', w.document.querySelector('.modal')));
-  console.log('  new event:', w.document.querySelector('.t-name').textContent, '/', w.document.querySelector('.t-meta').textContent);
+  await setVal(w.document.getElementById('nt-sport'), 'FUTSAL');
+  await click(btn('Create event'), 'create'); await click(btn('Create event', w.document.querySelector('.modal')), 'confirm create');
+  await go('Teams');
+  const ta = w.document.getElementById('bulk'); Object.getOwnPropertyDescriptor(w.HTMLTextAreaElement.prototype, 'value').set.call(ta, Array.from({ length: 12 }, (_, i) => 'Team ' + (i + 1)).join('\n')); ta.dispatchEvent(new w.Event('input', { bubbles: true })); await sleep(25);
+  await click(btn('Save'), 'save teams');
+  await go('Format');
+  await click($$('.tpl').find((b) => b.textContent.includes('reshuffled')), 'pick RR3');
+  await click(btn('Apply preset'), 'apply');
+  check($$('.phase-card').length === 4 && main().includes('do not continue'), 'Groups × 3 preset: 4 phases, warns teams stopping after stage 3');
+  await go('Phase setup');
+  check(main().includes('place 1') && main().includes('Avoid rematches'), 'stage 2 shows neutral places and avoid-rematch distribution');
   console.log('ERRORS:', errors.length ? errors.slice(0, 5) : 'none');
-  process.exit(errors.length ? 1 : 0);
-})().catch((e) => { console.log('THREW', e.stack, errors.slice(0, 5)); process.exit(1); });
+  console.log(fails || errors.length ? 'UI FAILED' : 'UI PASSED');
+  process.exit(fails || errors.length ? 1 : 0);
+})().catch((e) => { console.log('THREW', e.message, errors.slice(0, 5)); process.exit(1); });

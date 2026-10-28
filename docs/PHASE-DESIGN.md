@@ -1,6 +1,6 @@
 # Design: fasi componibili (black box)
 
-Versione 0.1 · 2026-10-28 · Stato: **proposta**, non ancora implementata.
+Versione 0.2 · 2026-10-28 · Stato: **implementato nel mockup** (`mockup/engine.js`, testato in `tests/engine.test.js`). Le scelte fatte durante l'implementazione sono nel §14.
 Sostituisce i formati fissi della [SPEC](SPEC.md) §4 con un modello in cui l'organizzatore **compone** il torneo collegando fasi. I template di oggi (RR → SE, ecc.) restano solo come scorciatoie che creano un grafo già pronto.
 
 ---
@@ -305,6 +305,19 @@ Fase 1 KNOCKOUT 16 squadre
 
 ## 13. Aperto
 
-- Distribuzione `AVOID_REMATCH`: se non esiste una distribuzione senza nessuna rivincita, quante se ne accettano? Proposta: si minimizzano, poi si avvisa.
-- Calendario: con D4 una fase non parte finché quelle di origine non sono confermate. Il generatore a orari fissi deve quindi mettere la fase dopo la fine di **tutte** le fasi di origine + il riposo minimo (oggi lo fa già per round).
-- Builder: per il primo rilascio bastano lista + form, oppure serve un editor grafico del grafo?
+- Builder: per il primo rilascio bastano lista + form (così è il mockup), oppure serve un editor grafico del grafo?
+- Tiebreaker e punti per singola fase: oggi valgono per tutta la categoria (§14).
+
+## 14. Scelte fatte nell'implementazione (mockup v2)
+
+| Tema | Scelta |
+|---|---|
+| `AVOID_REMATCH` | Le rivincite si **minimizzano** (scambi tra gironi finché il numero scende); se ne restano, la fase mostra quante. Non disponibile per le fasi senza fasi di origine (nessuno si è ancora incontrato). Es.: 8 squadre in 2 gironi → minimo 4 rivincite. |
+| Calendario a orari fissi | Una fase è messa dopo la fine di **tutte** le sue fasi di origine + il riposo minimo |
+| Punti, tiebreaker, colonne | A livello di **categoria**, uguali per tutte le sue fasi |
+| Classifica `final` (D2) | Posizioni giocate (finale, finaline) → turno di eliminazione → tiebreaker della fase → seed. Non servono pareggi da ordinare a mano |
+| Seed con "per posizione" | Le squadre dello stesso piazzamento in gironi diversi (es. tutte le prime) si ordinano con la classifica `cross:k` della fase di origine |
+| Americano → squadre | Connettore con `transform: 'PAIRS'`: coppie 1°+N°, 2°+N-1°… create alla conferma |
+| Spostamento manuale nei gironi | La distribuzione passa a `MANUAL` e resta finché non si cambia il numero di gironi |
+| Errori del builder | Ciclo/ordine sbagliato; posto usato due volte; classifica inesistente per quel tipo; tipo di partecipante diverso; "Overall" mescolato con posizioni di girone della stessa fase; "k-esimo del girone" insieme a "migliore k-esimo" (anche in fasi diverse) |
+| Avvisi del builder | Posizioni oltre la dimensione di una classifica (ignorate); squadre di una fase che non proseguono |

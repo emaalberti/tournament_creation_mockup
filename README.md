@@ -3,12 +3,12 @@
 The tournament logic for [turno-sport](https://turno-sport.com/), designed by reverse-engineering Tourny (tourny.ca) and rebuilt as a standalone engine plus a working mockup.
 
 Sports: **Football, Futsal, Volleyball, Tennis, Padel**.
-Formats: Round Robin, Single Elimination, Double Elimination, RR → SE, RR → DE, Americano, Americano → SE.
+Formats are **composed from phases**: Groups, Knockout, Double knockout and Americano, linked by connectors that pick places from earlier rankings. Presets cover the usual formats (Groups → Knockout with flights, Groups × 3 reshuffled, Americano → Knockout…).
 
 - **Repository:** https://github.com/emaalberti/tournament_creation_mockup (personal account for now; move it to the company organization with Settings → Transfer ownership)
-- **Live mockup:** https://claude.ai/artifact/6gBNiJyCoX3waWHxGzaHwh (private; share it from the page's Share menu)
-- **Spec:** [docs/SPEC.md](docs/SPEC.md), the source of truth for every rule and decision
-- **Composable phases (proposal):** [docs/PHASE-DESIGN.md](docs/PHASE-DESIGN.md), phases as black boxes linked by connectors, replacing fixed formats (in Italian)
+- **Live mockup:** https://claude.ai/artifact/6gBNiJyCoX3waWHxGzaHwh (share it from the page's Share menu)
+- **Phase design:** [docs/PHASE-DESIGN.md](docs/PHASE-DESIGN.md), the phase/connector model the engine implements (in Italian)
+- **Spec:** [docs/SPEC.md](docs/SPEC.md), sport rules, standings, results, scheduling and the decisions log (§10). Its fixed formats (§4) are replaced by the phase design.
 - **Porting guide:** [docs/PORTING.md](docs/PORTING.md), how to move this into turno-sport
 - **Research notes:** [docs/tourny-analysis/](docs/tourny-analysis/), what Tourny does, step by step
 
@@ -18,11 +18,10 @@ Formats: Round Robin, Single Elimination, Double Elimination, RR → SE, RR → 
 |---|---|
 | `mockup/engine.js` | **The engine.** Pure logic, no DOM or framework. This is the part to port. |
 | `mockup/app.js` | Throwaway mockup UI (React + htm from CDN). Not meant for production. |
-| `mockup/index.html` | Page shell and neutral styling for the mockup. |
-| `tests/engine-*.test.js` | 63 engine checks: pools, round robin, slots, wildcards, ties, brackets, byes, DE, sets, forfeits, Americano, scheduling, court queue. |
-| `tests/ui.test.js` | Clicks through every mockup screen in jsdom and runs a full event flow. |
-| `docs/SPEC.md` | Consolidated spec, including the decisions log (§10). |
-| `docs/tourny-analysis/` | Notes 01–05: Format, Standings, Categories & Teams, Rounds (incl. advancing teams deep dive), Guide. |
+| `mockup/index.html` | Page shell and styling for the mockup. |
+| `tests/engine.test.js` | 52 engine checks: presets as phase graphs, placeholders, cascade invalidation, knockout final placings, reshuffled group stages with carried-over points, consolation from knockout places, BYEs, validation errors, Americano pairs, results, scheduling. |
+| `tests/ui.test.js` | Clicks through every mockup screen in jsdom, builds a phase in the format builder and runs a full event flow. |
+| `docs/` | Design, spec, porting plan and research notes. |
 
 ## Run it
 
@@ -36,15 +35,15 @@ The mockup stores its state in the browser's localStorage. "Reset example" resto
 
 ## Engine API at a glance
 
-`engine.js` exposes `TE` (browser global, or `module.exports` in Node). The main entry points:
+`engine.js` exposes `TE` (browser global, or `module.exports` in Node).
 
-- **Setup:** `newState(sport, name)`, `newCategory`, `applyFormat(state, cat, templateId, flights)`
-- **Pools:** `snakePools(teamIds, n)`, `generatePoolGames(state, cat, round)`
-- **Standings:** `poolStandings`, `overallStandings` (per-game averages), `crossRanking`, `americanoStandings`
-- **Advancing teams:** `generateSlots(cat, poolRound, method, wildcards, counts)`, `setAdvancement`, `moveSlot`, `relevantTies`, `confirmAdvancement`, `unconfirm`
-- **Brackets:** `buildBracket` (SE with byes, placements and consolations; DE with reset), `resolve`, `sourceLabel`, `isPlayable`
-- **Results:** `validateResult`, `recordResult` (with reset rules), `clearResult`
-- **Americano:** `generateAmericano`
+- **State:** `newState(sport, name)`, `newCategory(name, sport)`. Category = teams/players + `phases` + `connectors` + `games`.
+- **Building the format:** `applyTemplate(state, cat, id, flights)`, `addPhase`, `removePhase`, `updatePhase`, `setConnector(state, cat, toPhaseId, { selectors: [{ fromPhase, ranking, positions }], seeding, transform })`, `validateGraph`
+- **Phase types:** `GROUPS` (rankings `pool:<n>`, `overall`, `cross:<k>`), `KNOCKOUT` and `DOUBLE_KNOCKOUT` (`final`), `AMERICANO` (`overall` of players). `rankingCatalog(cat, phase)` lists them.
+- **Lifecycle:** `phaseStatus` (DRAFT → READY → IN_PROGRESS → COMPLETE → CONFIRMED), `relevantTies`, `confirmPhase`, `unconfirmPhase`. Changes cascade to every later phase.
+- **Rankings:** `ranking(state, cat, phase, rankingId)`, `phaseStats` (with carried-over points)
+- **Setup helpers:** `movePoolEntrant`, `moveEntrant` (knockout seeding), `participantsChanged`
+- **Results:** `validateResult`, `recordResult`, `clearResult`, `resolve`, `sourceLabel`, `isPlayable`
 - **Scheduling:** `generateFixedSchedule`, `buildQueue`, `fillCourts`
 
-State is plain JSON. The shape is documented in SPEC §2.
+State is plain JSON.
