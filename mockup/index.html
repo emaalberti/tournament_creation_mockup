@@ -9,26 +9,20 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: operator console. Setup checklist rail on the left, one working panel stack on the right.
-   Neutral on purpose: the real app's design is applied later. */
+   Single light theme by request: white background, blue buttons (primary / secondary / ghost). */
 :root {
-  --bg: #f4f6f5; --surface: #ffffff; --sunken: #eef1f0; --fg: #17201c; --muted: #5d6a64; --line: #d9e0dd;
-  --accent: #1d6b48; --accent-soft: #e2f0e8; --accent-fg: #ffffff;
-  --good: #1d6b48; --good-soft: #e2f0e8; --warn: #8a5a00; --warn-soft: #fbf0d9; --bad: #a2302a; --bad-soft: #fbe5e3;
-  --rr: #2f5d8a; --se: #1d6b48; --de: #7a4a8c; --am: #9a5b1a;
+  --bg: #ffffff; --surface: #ffffff; --sunken: #f4f7fb; --fg: #13203a; --muted: #5a6a85; --line: #dde4ef;
+  --accent: #1d4ed8; --accent-soft: #e8effd; --accent-fg: #ffffff;
+  --btn-primary: #1d4ed8; --btn-primary-hover: #1e40af;
+  --btn-secondary: #e3ecfd; --btn-secondary-hover: #d2e0fc; --btn-secondary-fg: #1e3a8a; --btn-secondary-line: #bfd3fa;
+  --btn-ghost-fg: #2563eb;
+  --good: #15803d; --good-soft: #e5f5ea; --warn: #8a5a00; --warn-soft: #fbf0d9; --bad: #b42318; --bad-soft: #fdeceb;
+  --rr: #0e7490; --se: #1d4ed8; --de: #6d28d9; --am: #b45309;
   --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r: 8px;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #111614; --surface: #19201d; --sunken: #141a17; --fg: #e5ece8; --muted: #94a39c; --line: #2c3632;
-  --accent: #4fbf88; --accent-soft: #1b3328; --accent-fg: #0d1a13;
-  --good: #4fbf88; --good-soft: #1b3328; --warn: #e3b25c; --warn-soft: #33290f; --bad: #ef7d74; --bad-soft: #3a1c1a;
-  --rr: #7fb0e0; --se: #4fbf88; --de: #c597d6; --am: #e3a462; color-scheme: dark; } }
-:root[data-theme="dark"] {
-  --bg: #111614; --surface: #19201d; --sunken: #141a17; --fg: #e5ece8; --muted: #94a39c; --line: #2c3632;
-  --accent: #4fbf88; --accent-soft: #1b3328; --accent-fg: #0d1a13;
-  --good: #4fbf88; --good-soft: #1b3328; --warn: #e3b25c; --warn-soft: #33290f; --bad: #ef7d74; --bad-soft: #3a1c1a;
-  --rr: #7fb0e0; --se: #4fbf88; --de: #c597d6; --am: #e3a462; color-scheme: dark; }
 
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--body); font-variant-numeric: tabular-nums; }
@@ -57,7 +51,7 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .side-sep { margin: 12px 10px 4px; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .nav-item { display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: none; color: inherit; padding: 8px 10px; border-radius: var(--r); cursor: pointer; width: 100%; }
 .nav-item:hover { background: var(--sunken); }
-.nav-item.active { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.nav-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .check { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: .72rem; font-weight: 600; color: var(--muted); }
 .check.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .check.run { border-style: dashed; }
@@ -81,10 +75,11 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .field { display: grid; gap: 4px; min-width: 0; } .field-label { font-weight: 600; font-size: .85rem; }
 .hint { color: var(--muted); font-size: .8rem; font-weight: 400; }
 .muted { color: var(--muted); } .small { font-size: .8rem; } .spacer { flex: 1; }
-.btn { font: 600 .88rem var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 7px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-.btn:hover:not(:disabled) { background: var(--sunken); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); } .btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
-.btn.ghost { background: transparent; } .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn { font: 600 .88rem var(--body); border: 1px solid var(--btn-secondary-line); background: var(--btn-secondary); color: var(--btn-secondary-fg); padding: 7px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--btn-secondary-hover); }
+.btn.primary { background: var(--btn-primary); border-color: var(--btn-primary); color: var(--accent-fg); } .btn.primary:hover:not(:disabled) { background: var(--btn-primary-hover); border-color: var(--btn-primary-hover); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--btn-ghost-fg); } .btn.ghost:hover:not(:disabled) { background: var(--accent-soft); }
+.btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .icon-btn { border: 1px solid transparent; background: none; color: var(--muted); width: 26px; height: 26px; border-radius: 5px; cursor: pointer; font-size: .95rem; line-height: 1; }
 .icon-btn:hover:not(:disabled) { background: var(--sunken); color: var(--fg); } .icon-btn:disabled { opacity: .3; cursor: default; }
