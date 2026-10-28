@@ -5,6 +5,7 @@ The tournament logic for [turno-sport](https://turno-sport.com/), designed by re
 Sports: **Football, Futsal, Volleyball, Tennis, Padel**.
 Formats: Round Robin, Single Elimination, Double Elimination, RR → SE, RR → DE, Americano, Americano → SE.
 
+- **Repository:** https://github.com/emaalberti/tournament_creation_mockup (personal account for now; move it to the company organization with Settings → Transfer ownership)
 - **Live mockup:** https://claude.ai/artifact/6gBNiJyCoX3waWHxGzaHwh (private; share it from the page's Share menu)
 - **Spec:** [docs/SPEC.md](docs/SPEC.md), the source of truth for every rule and decision
 - **Porting guide:** [docs/PORTING.md](docs/PORTING.md), how to move this into turno-sport
