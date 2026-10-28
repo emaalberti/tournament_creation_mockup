@@ -45,7 +45,7 @@ Ogni tipo di fase implementa la stessa interfaccia. Il resto del sistema non con
 
 ```ts
 interface PhaseType<Config> {
-  type: 'GROUPS' | 'KNOCKOUT' | 'DOUBLE_KNOCKOUT' | 'SWISS' | 'AMERICANO'
+  type: 'GROUPS' | 'KNOCKOUT' | 'AMERICANO'   // 3 macro-categorie (§5)
   participantKind: 'TEAM' | 'PLAYER'                                  // D3
 
   defaultConfig(sport): Config
@@ -75,6 +75,8 @@ interface PhaseType<Config> {
 
 ## 5. Tipi di fase (v1)
 
+Tre macro-categorie: **Gironi**, **Eliminazione diretta** (singola o doppia, è un'impostazione) e **Americano**.
+
 ### 5.1 GROUPS (gironi all'italiana)
 
 | Impostazione | Valori |
@@ -99,9 +101,11 @@ BYE: un girone con un posto vuoto ha semplicemente meno squadre. Quella squadra 
 
 | Impostazione | Valori |
 |---|---|
+| `eliminations` | `1` = eliminazione singola · `2` = doppia (tabellone vincenti + perdenti) |
 | `seeding` | `STANDARD` (1–N, 2–N-1…) · `MANUAL` (scambio al primo turno) |
-| `placements` | Posizioni giocate davvero: `[1]`, `[1,3]`, `[1,3,5,7]`… |
-| `consolations` | Partite extra libere (vincente/perdente di #N) |
+| `placements` | Solo con 1 eliminazione: posizioni giocate davvero, `[1]`, `[1,3]`, `[1,3,5,7]`… |
+| `consolations` | Solo con 1 eliminazione: partite extra libere (vincente/perdente di #N) |
+| `bracketReset` | Solo con 2 eliminazioni: se vince la squadra del tabellone perdenti, si gioca la bella |
 | `tiebreakers` | Per ordinare gli eliminati nello stesso turno (D2) |
 
 BYE: il tabellone si porta alla potenza di 2 successiva e i BYE vanno ai seed più alti.
@@ -112,9 +116,9 @@ BYE: il tabellone si porta alla potenza di 2 successiva e i BYE vanno ai seed pi
 3. Dentro ogni gruppo si ordina con i **tiebreaker della fase** (D2), calcolati sulle partite della fase. Per un'eliminazione i tiebreaker utili sono soprattutto differenza punti/set e punti fatti.
 4. Se restano pari: seed d'ingresso; se ancora pari, ordine dato dall'organizzatore alla conferma (§8).
 
-### 5.3 DOUBLE_KNOCKOUT
+### 5.3 KNOCKOUT con 2 eliminazioni
 
-Come KNOCKOUT, più `bracketReset` (sì/no).
+Non è un tipo a sé: è KNOCKOUT con `eliminations = 2`.
 **Classifica `final`:** 1° e 2° dalla finale; poi le squadre per **turno di eliminazione nel tabellone perdenti**, ordinate con i tiebreaker della fase come in 5.2.
 
 ### 5.4 Fuori dalla v1
@@ -263,17 +267,17 @@ Lo snapshot salvato alla conferma rende la catena stabile: le fasi a valle leggo
 | Oggi (`engine.js`) | Nel nuovo modello |
 |---|---|
 | `TEMPLATES` + `applyFormat` | Template = grafi pronti; `applyFormat` crea fasi + connettori |
-| `round.type` RR/SE/DE/AM | Registro dei tipi di fase con l'interfaccia del §4 |
+| `round.type` RR/SE/DE/AM | Registro dei 3 tipi di fase con l'interfaccia del §4 (SE e DE = KNOCKOUT con 1 o 2 eliminazioni) |
 | `fromRoundId` (solo dal round 1) | Connettori da qualsiasi fase, anche più di una |
 | Slot `POOL / OVERALL / CROSS` | Selettori `{fromPhase, ranking, positions}` |
 | `poolStandings`, `overallStandings`, `crossRanking` | `ranking('pool:A' / 'overall' / 'cross:k')` della fase GROUPS |
-| Nessuna classifica per SE/DE | Nuova classifica `final` (§5.2, §5.3) |
+| Nessuna classifica per SE/DE | Nuova classifica `final` per KNOCKOUT (§5.2, §5.3) |
 | `confirmAdvancement`, `relevantTies`, `unconfirm` | Conferma generica per fase + invalidazione nel grafo |
 | `buildSE`, `buildDE`, `snakePools`, `rankIds`, medie | **Riutilizzati** così come sono |
 
 Piano di refactor:
 1. Interfaccia e registro dei tipi; GROUPS e KNOCKOUT riusando le funzioni esistenti.
-2. Classifica `final` per KNOCKOUT e DOUBLE_KNOCKOUT.
+2. Classifica `final` per KNOCKOUT (1 e 2 eliminazioni).
 3. Connettori, selettori e placeholder; conferma e invalidazione generiche.
 4. `inheritPoints`, distribuzioni dinamiche (`AVOID_REMATCH`), BYE.
 5. I template di oggi ricreati come grafi; tutti i test attuali devono continuare a passare.
@@ -319,5 +323,6 @@ Fase 1 KNOCKOUT 16 squadre
 | Seed con "per posizione" | Le squadre dello stesso piazzamento in gironi diversi (es. tutte le prime) si ordinano con la classifica `cross:k` della fase di origine |
 | Americano → squadre | Connettore con `transform: 'PAIRS'`: coppie 1°+N°, 2°+N-1°… create alla conferma |
 | Spostamento manuale nei gironi | La distribuzione passa a `MANUAL` e resta finché non si cambia il numero di gironi |
+| Tipi di fase | Tre: GROUPS, KNOCKOUT (`eliminations` 1 o 2), AMERICANO. Gli stati salvati con il vecchio tipo `DOUBLE_KNOCKOUT` vengono convertiti all'apertura |
 | Errori del builder | Ciclo/ordine sbagliato; posto usato due volte; classifica inesistente per quel tipo; tipo di partecipante diverso; "Overall" mescolato con posizioni di girone della stessa fase; "k-esimo del girone" insieme a "migliore k-esimo" (anche in fasi diverse) |
 | Avvisi del builder | Posizioni oltre la dimensione di una classifica (ignorate); squadre di una fase che non proseguono |

@@ -39,8 +39,7 @@
   // ---------- phase types (PHASE-DESIGN §5) ----------
   const PHASE_TYPES = {
     GROUPS: { label: 'Groups', kind: 'TEAM', desc: 'Teams play the others in their group. Rankings: each group, overall, best k-th placed.' },
-    KNOCKOUT: { label: 'Knockout', kind: 'TEAM', desc: 'Lose once and you are out. Ranking: final placings.' },
-    DOUBLE_KNOCKOUT: { label: 'Double knockout', kind: 'TEAM', desc: 'Out after two losses (upper and lower bracket). Ranking: final placings.' },
+    KNOCKOUT: { label: 'Knockout', kind: 'TEAM', desc: 'Teams are out after one loss, or after two with a lower bracket. Ranking: final placings.' },
     AMERICANO: { label: 'Americano', kind: 'PLAYER', desc: 'Players rotate partners every round. Ranking: players by points won.' },
   };
   const DISTRIBUTIONS = { SNAKE: 'Snake by seed', SEQUENTIAL: 'In seed order', MANUAL: 'Manual', AVOID_REMATCH: 'Avoid rematches' };
@@ -48,8 +47,8 @@
   function defaultPhaseConfig(type) {
     switch (type) {
       case 'GROUPS': return { pools: 2, distribution: 'SNAKE', games: 'ALL_ONCE', gamesPerTeam: 3, crossovers: [], gameLength: null, manualPools: null };
-      case 'KNOCKOUT': return { placements: [1], consolations: [], gameLength: null };
-      case 'DOUBLE_KNOCKOUT': return { bracketReset: true, gameLength: null };
+      // eliminations: 1 = single elimination, 2 = double elimination (upper + lower bracket)
+      case 'KNOCKOUT': return { eliminations: 1, placements: [1], consolations: [], bracketReset: true, gameLength: null };
       case 'AMERICANO': return { gameLength: null };
       default: return {};
     }
@@ -58,10 +57,10 @@
   // Presets: ready-made phase graphs (SPEC §4)
   const TEMPLATES = [
     { id: 'RR_SE', name: 'Groups to Knockout', recommended: true, desc: 'Group stage, then a knockout. Add flights for more brackets.', flow: ['GROUPS', 'KNOCKOUT'] },
-    { id: 'RR_DE', name: 'Groups to Double Knockout', desc: 'Group stage, then a double-elimination bracket.', flow: ['GROUPS', 'DOUBLE_KNOCKOUT'] },
+    { id: 'RR_DE', name: 'Groups to Double Knockout', desc: 'Group stage, then a knockout where teams are out after two losses.', flow: ['GROUPS', 'KNOCKOUT'] },
     { id: 'RR', name: 'Groups', desc: 'One group stage, ranked by results.', flow: ['GROUPS'] },
     { id: 'SE', name: 'Knockout', desc: 'A single knockout bracket.', flow: ['KNOCKOUT'] },
-    { id: 'DE', name: 'Double Knockout', desc: 'A double-elimination bracket.', flow: ['DOUBLE_KNOCKOUT'] },
+    { id: 'DE', name: 'Double Knockout', desc: 'A knockout where teams are out after two losses.', flow: ['KNOCKOUT'] },
     { id: 'RR3', name: 'Groups × 3, reshuffled', desc: 'Three group stages; each reshuffles the groups avoiding rematches and carries points over. Then a knockout.', flow: ['GROUPS', 'GROUPS', 'GROUPS', 'KNOCKOUT'] },
     { id: 'AM', name: 'Americano', americano: true, desc: 'Players rotate partners every round.', flow: ['AMERICANO'] },
     { id: 'AM_SE', name: 'Americano to Knockout', americano: true, desc: 'Americano, then the top players form pairs (1st + last qualifier…) for a knockout.', flow: ['AMERICANO', 'KNOCKOUT'] },
@@ -189,12 +188,13 @@
     const groups = (name) => { const p = addPhase(state, cat, 'GROUPS', name); p.config.pools = Math.max(1, Math.min(Math.floor(n / 2) || 1, Math.round(n / 4) || 1)); return p; };
     if (templateId === 'RR') groups('Pool Play');
     if (templateId === 'SE') addPhase(state, cat, 'KNOCKOUT', 'Bracket');
-    if (templateId === 'DE') addPhase(state, cat, 'DOUBLE_KNOCKOUT', 'Bracket');
+    if (templateId === 'DE') addPhase(state, cat, 'KNOCKOUT', 'Bracket').config.eliminations = 2;
     if (templateId === 'RR_SE' || templateId === 'RR_DE') {
       const g = groups('Pool Play');
       const f = Math.max(1, Math.min(5, flights || 1));
       for (let i = 0; i < f; i++) {
-        const k = addPhase(state, cat, templateId === 'RR_SE' ? 'KNOCKOUT' : 'DOUBLE_KNOCKOUT', f > 1 ? `${letter(i)} Flight` : 'Playoffs');
+        const k = addPhase(state, cat, 'KNOCKOUT', f > 1 ? `${letter(i)} Flight` : 'Playoffs');
+        if (templateId === 'RR_DE') k.config.eliminations = 2;
         cat.connectors.push({ id: uid('con'), to: k.id, seeding: 'BY_SOURCE_POSITION', transform: null, selectors: [{ fromPhase: g.id, ranking: 'pool:*', positions: [2 * i + 1, 2 * i + 2] }] });
       }
     }
@@ -380,11 +380,11 @@
     if (phase.type === 'GROUPS') return generateGroupGames(state, cat, phase);
     if (phase.type === 'KNOCKOUT') {
       const sources = phase.entrants.map((e) => slotSrc(phase, e.id));
+      if (phase.config.eliminations === 2) return buildDE(cat, phase, sources, phase.config.bracketReset);
       buildSE(cat, phase, sources, 1, (phase.config.placements || [1]).slice().sort((a, b) => a - b), 'M');
       for (const c of phase.config.consolations || []) addGame(cat, phase, { home: c.home, away: c.away, label: 'Consolation', bracket: 'C' });
       return;
     }
-    if (phase.type === 'DOUBLE_KNOCKOUT') return buildDE(cat, phase, phase.entrants.map((e) => slotSrc(phase, e.id)), phase.config.bracketReset);
     if (phase.type === 'AMERICANO') return generateAmericanoGames(state, cat, phase);
   }
 
@@ -1115,8 +1115,18 @@
     return n;
   }
 
+  // saved states from before double elimination became a knockout setting
+  function migrateState(st) {
+    for (const cat of st.categories || []) for (const p of cat.phases || []) {
+      if (p.type !== 'DOUBLE_KNOCKOUT') continue;
+      p.type = 'KNOCKOUT';
+      p.config = Object.assign(defaultPhaseConfig('KNOCKOUT'), p.config, { eliminations: 2 });
+    }
+    return st;
+  }
+
   const TE = {
-    SPORTS, PHASE_TYPES, DISTRIBUTIONS, TEMPLATES, RULES, COLUMNS, DEFAULT_TIEBREAKERS, STATUS_LABEL,
+    migrateState, SPORTS, PHASE_TYPES, DISTRIBUTIONS, TEMPLATES, RULES, COLUMNS, DEFAULT_TIEBREAKERS, STATUS_LABEL,
     templatesFor, rulesFor, defaultRules, uid, clone, ordinal, letter, parsePositions, formatPositions,
     newState, newCategory, findCat, findPhase, phaseGames, sortedPhases, connectorTo, sourcesOf, downstreamOf, isRoot,
     teamName, playerName, participantName, seededTeams, snakePools, circleRounds, poolPairs, seedOrder, americanoSchedule,

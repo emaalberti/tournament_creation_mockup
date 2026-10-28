@@ -139,5 +139,15 @@ for (const [n, k] of [[4, 2], [5, 2], [5, 3], [6, 3]]) {
   TE.simulatePhase(st, cat, de); const fin = TE.ranking(st, cat, de, 'final');
   assert(TE.phaseStatus(st, cat, de) === 'COMPLETE' && fin.length === 6 && !fin.some((r) => r.pending), 'DE final ranking complete'); }
 
+// --- three phase types: double elimination is a knockout setting
+{ assert(Object.keys(TE.PHASE_TYPES).join(',') === 'GROUPS,KNOCKOUT,AMERICANO', 'phase types are Groups, Knockout, Americano');
+  const { st, cat } = mk('TENNIS', 'DE', 8); const ko = cat.phases[0];
+  assert(ko.type === 'KNOCKOUT' && ko.config.eliminations === 2 && TE.phaseGames(cat, ko.id).length === 15, 'DE preset = knockout with 2 eliminations (15 games)');
+  TE.updatePhase(st, cat, ko.id, { config: { eliminations: 1 } });
+  assert(TE.phaseGames(cat, ko.id).length === 7, 'switching to 1 elimination rebuilds a single bracket (7 games)');
+  const old = { categories: [{ phases: [{ type: 'DOUBLE_KNOCKOUT', config: { bracketReset: false } }] }] };
+  TE.migrateState(old); const m = old.categories[0].phases[0];
+  assert(m.type === 'KNOCKOUT' && m.config.eliminations === 2 && m.config.bracketReset === false, 'old saved double-knockout phases are migrated'); }
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

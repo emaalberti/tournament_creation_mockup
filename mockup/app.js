@@ -7,7 +7,7 @@
 
   // ---------- persistence ----------
   function load() {
-    try { const s = localStorage.getItem(STORE); if (s) { const p = JSON.parse(s); if (p && p.version === 2) return p; } } catch (e) { /* storage unavailable */ }
+    try { const s = localStorage.getItem(STORE); if (s) { const p = JSON.parse(s); if (p && p.version === 2) return TE.migrateState(p); } } catch (e) { /* storage unavailable */ }
     return seed();
   }
   function save(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { /* ignore */ } }
@@ -357,7 +357,7 @@
     return html`<${Section} title=${html`<span className="row">${typeChip(phase.type)} ${phase.name}</span>`} sub=${`${phase.entrants.length} places${TE.sourcesOf(cat, phase).length ? ` · from ${TE.sourcesOf(cat, phase).map((s) => s.name).join(', ')}` : ''}`} actions=${html`<${StatusPill} st=${st} cat=${cat} phase=${phase} />`}>
       ${!phase.built ? html`<${Note} tone="warn">${phase.type === 'AMERICANO' ? `Americano needs a multiple of 4 players (now ${phase.entrants.length}).` : 'This phase needs at least two places. Add teams or choose where its participants come from on the Format page.'}<//>` : null}
       ${phase.type === 'GROUPS' && phase.entrants.length >= 2 ? html`<${GroupsSetup} ...${p} />` : null}
-      ${(phase.type === 'KNOCKOUT' || phase.type === 'DOUBLE_KNOCKOUT') && phase.built ? html`<${BracketSetup} ...${p} />` : null}
+      ${phase.type === 'KNOCKOUT' && phase.built ? html`<${BracketSetup} ...${p} />` : null}
       ${phase.type === 'AMERICANO' && phase.built ? html`<${AmericanoSetup} ...${p} />` : null}
     <//>`;
   }
@@ -410,9 +410,10 @@
     const [ca, setCa] = useState(''); const [cb, setCb] = useState(''); const [ra, setRa] = useState('L'); const [rb, setRb] = useState('L');
     return html`<div className="stack sm">
       <details className="disclose"><summary>Seeding order (first-round matchups). Byes go to the top seeds.</summary><ol className="seed-list">${phase.entrants.map((e, i) => html`<li key=${e.id}><span className="seedno">${i + 1}</span>${TE.entrantLabel(cat, phase, e)}<span className="row tight"><button className="icon-btn" aria-label="Move up" disabled=${i === 0} onClick=${() => guard('Change the seeding', () => act((d, c) => TE.moveEntrant(d, c, phase.id, i, i - 1)))}>↑</button><button className="icon-btn" aria-label="Move down" disabled=${i === n - 1} onClick=${() => guard('Change the seeding', () => act((d, c) => TE.moveEntrant(d, c, phase.id, i, i + 1)))}>↓</button></span></li>`)}</ol></details>
-      ${phase.type === 'KNOCKOUT' ? html`<div className="field"><span className="field-label">Placement games</span><div className="checks">${[[3, 4], [5, 8], [7, 8]].map(([pl, min]) => html`<label key=${pl} className="check-item"><input type="checkbox" disabled=${n < min || (pl === 7 && !cfg.placements.includes(5))} checked=${cfg.placements.includes(pl)} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(pl) : (s.delete(pl), pl === 5 && s.delete(7)); upd({ placements: [...s].sort((x, y) => x - y) }); }} /> ${TE.ordinal(pl)} place</label>`)}</div><span className="hint">Places not played are decided by the tiebreakers among teams knocked out in the same round.</span></div>`
+      <div className="seg" role="radiogroup" aria-label="Eliminated after">${[[1, 'Out after 1 loss'], [2, 'Out after 2 losses (lower bracket)']].map(([k, l]) => html`<button role="radio" aria-checked=${cfg.eliminations === k} className=${cfg.eliminations === k ? 'on' : ''} onClick=${() => cfg.eliminations !== k && upd({ eliminations: k })}>${l}</button>`)}</div>
+      ${cfg.eliminations !== 2 ? html`<div className="field"><span className="field-label">Placement games</span><div className="checks">${[[3, 4], [5, 8], [7, 8]].map(([pl, min]) => html`<label key=${pl} className="check-item"><input type="checkbox" disabled=${n < min || (pl === 7 && !cfg.placements.includes(5))} checked=${cfg.placements.includes(pl)} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(pl) : (s.delete(pl), pl === 5 && s.delete(7)); upd({ placements: [...s].sort((x, y) => x - y) }); }} /> ${TE.ordinal(pl)} place</label>`)}</div><span className="hint">Places not played are decided by the tiebreakers among teams knocked out in the same round.</span></div>`
       : html`<label className="check-item toggle"><input type="checkbox" checked=${cfg.bracketReset} onChange=${(e) => upd({ bracketReset: e.target.checked })} /> <span><b>Bracket reset</b><br /><span className="hint">If the lower-bracket team wins the grand final, a deciding game is played.</span></span></label>`}
-      ${phase.type === 'KNOCKOUT' && games.length ? html`<div className="sub-block"><div className="sub-title">Consolation games <span className="hint">Extra games between winners or losers of earlier games. They do not change the final placings.</span></div>
+      ${cfg.eliminations !== 2 && games.length ? html`<div className="sub-block"><div className="sub-title">Consolation games <span className="hint">Extra games between winners or losers of earlier games. They do not change the final placings.</span></div>
         <div className="row wrap">
           <select aria-label="Home result" value=${ra} onChange=${(e) => setRa(e.target.value)}><option value="L">Loser of</option><option value="W">Winner of</option></select>
           <select aria-label="Home game" value=${ca} onChange=${(e) => setCa(e.target.value)}><option value="">game…</option>${games.filter((g) => g.bracket !== 'C').map((g) => html`<option value=${g.number}>#${g.number} ${g.label}</option>`)}</select>
@@ -432,7 +433,7 @@
     const games = TE.phaseGames(cat, phase.id);
     const groups = {}, order = [];
     games.forEach((g) => { const key = (g.bracket === 'L' ? 'Lower · ' : g.bracket === 'P' || g.bracket === 'C' ? 'Placement · ' : '') + g.label; if (!groups[key]) { groups[key] = []; order.push(key); } groups[key].push(g); });
-    const sections = phase.type === 'DOUBLE_KNOCKOUT' ? [['Upper bracket', order.filter((k) => groups[k][0].bracket === 'U')], ['Lower bracket', order.filter((k) => groups[k][0].bracket === 'L')], ['Grand final', order.filter((k) => groups[k][0].bracket === 'GF')]] : [['Main bracket', order.filter((k) => groups[k][0].bracket === 'M')], ['Placement & consolation', order.filter((k) => groups[k][0].bracket !== 'M')]];
+    const sections = phase.config.eliminations === 2 ? [['Upper bracket', order.filter((k) => groups[k][0].bracket === 'U')], ['Lower bracket', order.filter((k) => groups[k][0].bracket === 'L')], ['Grand final', order.filter((k) => groups[k][0].bracket === 'GF')]] : [['Main bracket', order.filter((k) => groups[k][0].bracket === 'M')], ['Placement & consolation', order.filter((k) => groups[k][0].bracket !== 'M')]];
     return html`<div className="bracket-wrap">${sections.filter(([, ks]) => ks.length).map(([title, ks]) => html`<div key=${title}><div className="sub-title">${title}</div><div className="bracket">${ks.map((k) => html`<div className="b-col" key=${k}><div className="b-col-head">${k.replace(/^(Lower|Placement) · /, '')}</div>${groups[k].map((g) => html`<${GameCard} key=${g.id} st=${st} cat=${cat} g=${g} onClick=${onGame} />`)}</div>`)}</div></div>`)}</div>`;
   }
   function GameCard({ st, cat, g, onClick }) {
@@ -509,7 +510,7 @@
       const ready = games.filter((g) => g.status === 'SCHEDULED' && TE.isPlayable(st, cat, g)).length;
       return html`<${Section} key=${ph.id} title=${html`<span className="row">${typeChip(ph.type)} ${ph.name}</span>`} sub=${`${games.length - left} of ${games.length} played · ${ready} ready to play`} actions=${html`<${StatusPill} st=${st} cat=${cat} phase=${ph} /><${Btn} kind="ghost" disabled=${!ready || st.tournament.status !== 'PUBLISHED'} title="Fills in random results so you can test the flow" onClick=${() => { const n = act((d, c) => TE.simulatePhase(d, c, TE.findPhase(c, ph.id))); say(`${n} example results entered.`); }}>Fill example results<//>`}>
         ${TE.phaseStatus(st, cat, ph) === 'READY' ? html`<${Note}>Waiting for ${TE.sourcesOf(cat, ph).filter((s) => !s.confirmed).map((s) => s.name).join(', ')} to be confirmed. Games show placeholders until then.<//>` : null}
-        ${ph.type === 'KNOCKOUT' || ph.type === 'DOUBLE_KNOCKOUT' ? html`<${BracketView} st=${st} cat=${cat} phase=${ph} onGame=${(g) => openResult(ctx, g)} />`
+        ${ph.type === 'KNOCKOUT' ? html`<${BracketView} st=${st} cat=${cat} phase=${ph} onGame=${(g) => openResult(ctx, g)} />`
         : html`<div className="game-grid">${games.map((g) => html`<div key=${g.id} className="game-cell"><div className="muted small">${g.label}${g.matchday ? ` · ${ph.type === 'AMERICANO' ? 'round' : 'matchday'} ${g.matchday}` : ''}</div><${GameCard} st=${st} cat=${cat} g=${g} onClick=${(x) => openResult(ctx, x)} /></div>`)}</div>`}
       <//>`;
     })}</div>`;
