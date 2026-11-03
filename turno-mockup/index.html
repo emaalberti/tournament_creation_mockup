@@ -2412,12 +2412,11 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const canAdd = phase.pools.length + 1 <= maxPools;
     return html`<div className="win-body">
       <aside className="win-aside">
-        <div className="count-box"><span className="eb" style=${{ color: 'var(--green-ink)' }}>Squadre nei gironi</span><b>${inPools}<small> / ${n}</small></b><span className="small">Ogni girone gioca ${gamesPerTeam(phase)} partite a squadra · totale ${games}</span></div>
         <${GamesOptions} ...${ctx} />
         <p className="info">I gironi vengono riempiti per testa di serie, a serpentina. Trascina una squadra su un’altra per <b>scambiarle</b>, o nello spazio “Trascina qui” di un girone per spostarla: così cambi anche quante squadre ha ogni girone.</p>
       </aside>
       <div className="win-main">
-        <div className="row" style=${{ justifyContent: 'space-between' }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci per testa di serie</button></div>
+        <div className="row" style=${{ justifyContent: 'space-between' }}><span className="row" style=${{ gap: 12 }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><span className="muted small">${phase.pools.length} gironi · ${games} partite, ${gamesPerTeam(phase)} a squadra</span></span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci per testa di serie</button></div>
         <div className="pools">${phase.pools.map((pl) => html`<div key=${pl.number} className=${'pool' + (over === 'p' + pl.number ? ' over' : '')} onDragOver=${(e) => { e.preventDefault(); setOver('p' + pl.number); }} onDrop=${(e) => { e.preventDefault(); move(drag || e.dataTransfer.getData('text/plain'), pl.number); end(); }}>
           <div className="pool-h">${poolName(cat, phase, pl)}<span className="pool-size">${pl.ids.length} squadre${phase.pools.length > 1 ? html`<button className="pool-x" aria-label=${'Togli ' + poolName(cat, phase, pl)} title="Togli il girone: le sue squadre vanno negli altri" onClick=${() => removePool(pl.number)}>×</button>` : null}</span></div>
           <ul>${pl.ids.map((eid) => { const e = phase.entrants.find((x) => x.id === eid); return html`<li key=${eid} draggable="true" className=${'drag' + (drag === eid ? ' dragging' : '') + (over === eid ? ' over' : '')}
