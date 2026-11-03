@@ -434,6 +434,100 @@ li.sortable.over { outline: 2px dashed var(--blue); outline-offset: 1px; }
 li.sortable .handle { color: #9CA3AF; }
 .tie-box li { justify-content: flex-start; gap: 8px; background: rgba(255,255,255,.6); padding: 4px 6px; margin-bottom: 3px; list-style: none; }
 .tie-box ol { padding-left: 0; }
+
+/* nome della fase nella finestra */
+.win-name { font-size: 22px; font-weight: 800; letter-spacing: -.3px; border: 1px solid transparent; padding: 2px 6px; min-width: 0; width: 260px; background: transparent; }
+.win-name:hover { border-color: var(--line-soft); } .win-name:focus { border-color: var(--blue); background: var(--card); }
+.riep-link { margin-left: auto; color: var(--blue-ink); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--blue-ink); font-weight: 700; text-decoration: underline; }
+
+/* riepilogo */
+.riep { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.riep button { width: 100%; display: flex; align-items: center; gap: 14px; border: 1px solid var(--line-soft); background: var(--card); padding: 12px 14px; text-align: left; }
+.riep button:hover { border-color: var(--blue); }
+.rp-n { width: 30px; height: 30px; display: grid; place-items: center; background: var(--side); color: #fff; font-weight: 800; font-size: 12px; flex: none; }
+.rp-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-main b { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.rp-out { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; font-weight: 700; text-align: right; }
+
+/* categorie */
+.cat-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; margin-bottom: 18px; }
+.cat-pick { border: 1px solid var(--line); background: var(--card); padding: 10px 16px; text-align: left; display: flex; flex-direction: column; gap: 2px; min-width: 170px; }
+.cat-pick b { font-size: 14px; } .cat-pick small { color: var(--muted); font-size: 12px; }
+.cat-pick.on { background: var(--side); border-color: var(--side); color: #fff; } .cat-pick.on small { color: #B6C0D6; }
+.cat-new { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.cat-new input { width: 260px; }
+.rules { background: var(--card); padding: 24px 26px; border-top: 4px solid var(--blue); }
+.rules-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.rules-name { font-size: 26px; font-weight: 800; letter-spacing: -.4px; border: 1px solid transparent; padding: 2px 6px; margin-left: -6px; width: min(420px, 100%); }
+.rules-name:hover { border-color: var(--line-soft); } .rules-name:focus { border-color: var(--blue); }
+.rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.rule-box { border: 1px solid var(--line-soft); background: var(--aside); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rule-box.wide { grid-column: 1 / -1; }
+.rule-box h3 { margin: 0; font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.rule-box h3 .rn { width: 24px; height: 24px; display: grid; place-items: center; background: var(--blue); color: #fff; font-size: 12px; }
+.rule-box .hint { margin: 0; }
+.pts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; }
+.pts-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line-soft); padding: 6px 6px 6px 12px; font-size: 13px; font-weight: 600; }
+.pts-row input { width: 64px; text-align: right; }
+.bo-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bo-pick button { border: 1px solid var(--line); background: var(--card); padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.bo-pick b { font-size: 22px; } .bo-pick span { font-size: 12px; color: var(--muted); }
+.bo-pick button.on { background: var(--blue); border-color: var(--blue); color: #fff; } .bo-pick button.on span { color: #DCE6FF; }
+.col-pick { background: var(--card); }
+.col-pick th { padding: 0; vertical-align: bottom; }
+.col-pick th button { border: 0; background: none; width: 100%; padding: 8px 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 800; font-size: 12px; color: var(--ink); }
+.col-pick th button small { font-size: 9.5px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.col-pick th button .ck { width: 16px; height: 16px; display: grid; place-items: center; font-size: 10px; border: 1px solid var(--line); }
+.col-pick th.on button .ck { background: var(--blue); border-color: var(--blue); color: #fff; }
+.col-pick th.on { background: var(--blue-soft); }
+.col-pick th.off button { color: #9CA3AF; } .col-pick td.off { color: #C4C9CF; }
+.col-pick th button:hover { background: var(--blue-soft); }
+
+/* classifiche */
+.phase-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.phase-tabs button { border: 1px solid var(--line); background: var(--card); padding: 8px 14px; text-align: left; display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.phase-tabs button.on { border-color: var(--side); background: var(--side); color: #fff; }
+.pt-top { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.pt-st { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.phase-tabs button.on .pt-st { color: #B6C0D6; }
+.pt-st.st-CONFIRMED { color: var(--green-ink); } .pt-st.st-COMPLETE { color: var(--warn); }
+
+/* programma */
+.mode-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.mode { border: 1px solid var(--line); background: var(--card); padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 4px; }
+.mode b { font-size: 15px; } .mode span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.mode.on { border: 2px solid var(--blue); background: #F8FAFF; }
+.sched-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.day-tab { border: 1px solid var(--line); background: var(--card); padding: 6px 12px; font-weight: 800; font-size: 12px; text-transform: capitalize; }
+.day-tab.on { background: var(--side); color: #fff; border-color: var(--side); }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+.flag { border: 1px solid var(--line-soft); background: var(--card); padding: 4px 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.flag.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+.matrix-wrap { overflow-x: auto; border: 1px solid var(--line-soft); }
+.matrix { display: grid; position: relative; min-width: max-content; }
+.mx-corner { grid-row: 1; grid-column: 1; position: sticky; left: 0; z-index: 3; background: var(--aside); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; padding: 0 12px; }
+.mx-time { background: var(--aside); border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; color: var(--ink-2); padding: 8px 0 0 4px; border-left: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; }
+.mx-time.half { border-left: 1px dotted var(--line-soft); }
+.mx-court { position: sticky; left: 0; z-index: 2; background: var(--card); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line-soft); padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; }
+.mx-court b { font-size: 13px; } .mx-court small { font-size: 11px; color: var(--muted); }
+.mx-cell { border-bottom: 1px solid var(--line-soft); border-left: 1px solid var(--line-soft); }
+.mx-cell.half { border-left-style: dotted; }
+.mx-cell.closed { background: repeating-linear-gradient(135deg, #F3F4F6 0 6px, #ECEEF1 6px 12px); }
+.mx-cell.over { background: var(--blue-soft); box-shadow: inset 0 0 0 2px var(--blue); }
+.gcard { z-index: 1; margin: 4px 3px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--blue); padding: 4px 7px; display: flex; flex-direction: column; gap: 1px; font-size: 11.5px; cursor: grab; overflow: hidden; box-shadow: 0 1px 3px rgba(17,24,39,.08); min-width: 0; }
+.gcard:hover { box-shadow: 0 3px 10px rgba(17,24,39,.15); }
+.gcard .gc-top { display: flex; gap: 6px; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard .gc-top b { color: var(--ink); }
+.gcard .gc-t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard.dim { opacity: .25; }
+.gcard.clash { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad-bg); }
+.gcard.done { background: var(--green-bg); }
+.tray.over { box-shadow: inset 0 0 0 2px var(--blue); }
+.tray-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.tray-list .gcard { margin: 0; }
+.blocks { border: 1px solid var(--line-soft); background: var(--aside); padding: 12px 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+.col-pick thead th:nth-child(-n+2) { padding: 8px 10px; vertical-align: bottom; }
 </style>
 </head>
 <body>
@@ -1724,6 +1818,9 @@ li.sortable .handle { color: #9CA3AF; }
     c.connectors.push({ id: TE.uid('con'), to: arg.id, seeding: 'SELECTOR_ORDER', transform: null, selectors: [{ fromPhase: g.id, ranking: 'cross:3', positions: [1, 2, 3] }] });
     TE.rebuildAll(st, c);
     st.venues.push({ id: TE.uid('ven'), name: 'Circolo Padel Città', spaces: [1, 2, 3, 4].map((i) => ({ id: TE.uid('sp'), name: `Campo ${i}`, categoryIds: [] })) });
+    st.tournament.scheduling = 'FIXED'; st.tournament.restMinutes = 0;
+    st.schedule.blocks.push({ id: TE.uid('blk'), day: '2026-11-07', start: '09:00', end: '20:00', spaceIds: TE.allSpaces(st).map((x) => x.id) });
+    TE.generateFixedSchedule(st);
     TE.allSpaces(st).forEach((s) => { st.schedule.courts[s.id] = null; });
     try { TE.buildQueue(st); } catch (e) { /* coda opzionale */ }
     return st;
@@ -1843,7 +1940,6 @@ li.sortable .handle { color: #9CA3AF; }
             <${Field} label="Nome" id="ev-name"><input id="ev-name" placeholder="Nome del torneo" value=${t.name} onChange=${(e) => act((d) => { d.tournament.name = e.target.value; })} /><//>
             <${Field} label="Sport" id="ev-sport" hint=${locked ? 'Per cambiare sport togli prima squadre e fasi.' : null}><select id="ev-sport" value=${t.sport || ''} disabled=${locked} onChange=${(e) => act((d) => TE.setSport(d, e.target.value))}>
               <option value="" disabled>Scegli lo sport</option>${Object.entries(TE.SPORTS).map(([k, v]) => html`<option value=${k}>${v.label}</option>`)}</select><//>
-            ${t.sport ? html`<${Field} label="Riposo minimo tra due partite (minuti)" id="ev-rest" hint=${`Predefinito per ${TE.SPORTS[t.sport].label}: ${TE.SPORTS[t.sport].rest} min. 0 lo disattiva.`}><input id="ev-rest" type="number" min="0" step="5" value=${t.restMinutes} onChange=${(e) => act((d) => { d.tournament.restMinutes = Math.max(0, +e.target.value || 0); })} /><//>` : null}
           </div>
         <//>
         ${t.sport ? html`<${SportCard} sport=${t.sport} />` : null}
@@ -1863,25 +1959,19 @@ li.sortable .handle { color: #9CA3AF; }
 
   // ---------- Categorie + regole di classifica ----------
   function CategoriesView(ctx) {
-    const { st, cat, act, ask, say, setCatId } = ctx;
+    const { st, cat, act, say, setCatId } = ctx;
     const [name, setName] = useState('');
     return html`<div>
-      <${PageHead} title="Categorie" lead="Ogni categoria ha le sue squadre, le sue fasi e le sue classifiche." />
-      <div className="stack">
-        <${Card} eb="Elenco">
-          ${st.categories.map((c) => html`<div key=${c.id} className="list-row">
-            <input aria-label="Nome categoria" value=${c.name} onChange=${(e) => act((d) => { TE.findCat(d, c.id).name = e.target.value; })} />
-            <span className="muted small">${c.teams.filter((t) => !t.fromAmericano).length} squadre · ${c.phases.length} fasi · ${c.games.length} partite</span>
-            <span className="spacer"></span>
-            ${cat && cat.id === c.id ? html`<${Tag} tone="dark">Regole sotto<//>` : html`<${Btn} kind="ghost sm" onClick=${() => setCatId(c.id)}>Regole<//>`}
-            <${Btn} kind="ghost sm danger" onClick=${() => ask(`Eliminare ${c.name}?`, 'Squadre, fasi e partite della categoria vengono rimosse.', 'Elimina', () => { act((d) => { d.categories = d.categories.filter((x) => x.id !== c.id); }); const o = st.categories.find((x) => x.id !== c.id); setCatId(o ? o.id : null); }, true)}>Elimina<//>
-          </div>`)}
-          <form className="row" style=${{ marginTop: 14 }} onSubmit=${(e) => { e.preventDefault(); if (!name.trim()) return; const c = TE.newCategory(name.trim(), st.tournament.sport); act((d) => { d.categories.push(c); }); setName(''); setCatId(c.id); say(`${c.name} creata.`, 'good'); }}>
-            <input id="new-cat" aria-label="Nuova categoria" placeholder="Es. Open femminile" value=${name} onChange=${(e) => setName(e.target.value)} /><button className="btn primary" type="submit">Aggiungi categoria</button>
-          </form>
-        <//>
-        ${cat ? html`<${RulesView} ...${ctx} />` : null}
-      </div></div>`;
+      <${PageHead} title="Categorie" lead="Ogni categoria ha le sue squadre, le sue fasi e le sue regole. Scegli una categoria per impostarne le regole." />
+      <div className="cat-bar">
+        ${st.categories.map((c) => html`<button key=${c.id} className=${'cat-pick' + (cat && cat.id === c.id ? ' on' : '')} onClick=${() => setCatId(c.id)} aria-pressed=${!!cat && cat.id === c.id}>
+          <b>${c.name}</b><small>${c.teams.filter((t) => !t.fromAmericano).length} squadre · ${c.phases.length} fasi</small></button>`)}
+        <form className="cat-new" onSubmit=${(e) => { e.preventDefault(); if (!name.trim()) return; const c = TE.newCategory(name.trim(), st.tournament.sport); act((d) => { d.categories.push(c); }); setName(''); setCatId(c.id); say(`${c.name} creata.`, 'good'); }}>
+          <input id="new-cat" aria-label="Nuova categoria" placeholder="Nuova categoria, es. Open femminile" value=${name} onChange=${(e) => setName(e.target.value)} /><button className="btn" type="submit">+ Aggiungi</button>
+        </form>
+      </div>
+      ${cat ? html`<${RulesView} ...${ctx} />` : html`<${Note}>Crea la prima categoria.<//>`}
+    </div>`;
   }
   // nomi dei criteri in parole semplici (l'unità dipende dallo sport: game, gol, punti)
   function ruleName(r, sportKey) {
@@ -1893,29 +1983,47 @@ li.sortable .handle { color: #9CA3AF; }
     const hs = list.filter((x) => x.scope === 'H');
     return hs.indexOf(t) === 0 ? 'Scontro diretto' : `Scontro diretto · ${ruleName(t.rule, sportKey).toLowerCase()}`;
   }
-  function RulesView({ st, cat, sport, act }) {
+  const SAMPLE_ROWS = [
+    { n: 'Rossi / Bianchi', GP: 3, W: 3, T: 0, L: 0, C: 0, F: 0, PF: 38, PA: 21, SF: 6, SA: 1 },
+    { n: 'Greco / Bruno', GP: 3, W: 2, T: 0, L: 1, C: 0, F: 0, PF: 33, PA: 27, SF: 4, SA: 3 },
+    { n: 'Costa / Giordano', GP: 3, W: 0, T: 0, L: 3, C: 0, F: 0, PF: 19, PA: 42, SF: 1, SA: 6 },
+  ].map((r) => Object.assign(r, { PD: r.PF - r.PA, SD: r.SF - r.SA, PTS: r.W }));
+  function RulesView({ st, cat, sport, act, ask, setCatId }) {
     const sortP = useSortable((list, from, to) => act((d, c) => { moveArr(c.format.tiebreakers, from, to); }));
     const [newRule, setNewRule] = useState('WINS');
-    const [newScope, setNewScope] = useState('O');
     const f = cat.format;
     const set = (fn) => act((d, c) => { fn(TE.findCat(d, cat.id).format); });
     const rules = TE.rulesFor(st.tournament.sport).filter((r) => !(r === 'POINTS' && f.pointsSystem === 'NONE'));
-    const pf = [['win', 'Vittoria'], ...(sport.ties ? [['tie', 'Pareggio']] : []), ['loss', 'Sconfitta'], ['cancel', 'Annullata'], ['forfeitWin', 'Vittoria a forfait'], ['forfeitLoss', 'Sconfitta a forfait'], ...(sport.sets ? [['setWin', 'Per set vinto'], ['setLoss', 'Per set perso']] : [])];
-    return html`<${Card} eb=${`Regole di classifica · ${cat.name}`} sub="Valgono per tutte le fasi della categoria.">
-      <div className="stack">
-        <div>
-          <div className="sub-t">Punti</div>
-          <div className="seg" role="radiogroup">${[['POINTS', 'Dai risultati'], ['AWARDED', 'Assegnati a mano'], ['NONE', 'Solo criteri']].map(([k, l]) => html`<button key=${k} role="radio" aria-checked=${f.pointsSystem === k} className=${f.pointsSystem === k ? 'on' : ''} onClick=${() => set((x) => { x.pointsSystem = k; })}>${l}</button>`)}</div>
-          ${f.pointsSystem === 'POINTS' ? html`<div className="grid4" style=${{ marginTop: 12 }}>${pf.map(([k, l]) => html`<${Field} key=${k} label=${l} id=${'pt-' + k}><input id=${'pt-' + k} type="number" value=${f.points[k]} onChange=${(e) => set((x) => { x.points[k] = parseInt(e.target.value, 10) || 0; })} /><//>`)}</div>` : null}
-          ${sport.sets ? html`<div style=${{ marginTop: 12, maxWidth: 220 }}><${Field} label="Set per partita" id="bo"><select id="bo" value=${f.bestOf} onChange=${(e) => set((x) => { x.bestOf = +e.target.value; })}>${[1, 3, 5].map((n) => html`<option key=${n} value=${n}>Al meglio dei ${n}</option>`)}</select><//></div>` : null}
+    const pf = [['win', 'Vittoria'], ...(sport.ties ? [['tie', 'Pareggio']] : []), ['loss', 'Sconfitta'], ['forfeitWin', 'Vittoria a forfait'], ['forfeitLoss', 'Sconfitta a forfait'], ['cancel', 'Partita annullata'], ...(sport.sets ? [['setWin', 'Per ogni set vinto'], ['setLoss', 'Per ogni set perso']] : [])];
+    const cols = Object.keys(TE.COLUMNS).filter((k) => (sport.sets || !['SF', 'SA', 'SD'].includes(k)) && (sport.ties || k !== 'T'));
+    const toggleCol = (k) => set((x) => { x.columns = x.columns.includes(k) ? x.columns.filter((c) => c !== k) : Object.keys(TE.COLUMNS).filter((c) => x.columns.includes(c) || c === k); });
+    const cell = (r, k) => (k === 'PD' || k === 'SD' ? (r[k] > 0 ? '+' : '') + r[k] : r[k]);
+    return html`<section className="rules cut">
+      <header className="rules-h">
+        <div className="stack" style=${{ gap: 6 }}><div className="eb">Regole della categoria</div>
+          <input className="rules-name" id=${'cn-' + cat.id} aria-label="Nome della categoria" value=${cat.name} onChange=${(e) => act((d) => { TE.findCat(d, cat.id).name = e.target.value; })} />
+          <span className="muted small">Valgono per tutte le fasi di ${cat.name}.</span></div>
+        <${Btn} kind="ghost sm danger" onClick=${() => ask(`Eliminare ${cat.name}?`, 'Squadre, fasi e partite della categoria vengono rimosse.', 'Elimina', () => { act((d) => { d.categories = d.categories.filter((x) => x.id !== cat.id); }); const o = st.categories.find((x) => x.id !== cat.id); setCatId(o ? o.id : null); }, true)}>Elimina categoria<//>
+      </header>
+      <div className="rules-grid">
+        <div className="rule-box">
+          <h3><span className="rn">1</span>Assegnazione punti</h3>
+          <div className="seg full" role="radiogroup">${[['POINTS', 'Dai risultati'], ['AWARDED', 'A mano'], ['NONE', 'Nessun punto']].map(([k, l]) => html`<button key=${k} role="radio" aria-checked=${f.pointsSystem === k} className=${f.pointsSystem === k ? 'on' : ''} onClick=${() => set((x) => { x.pointsSystem = k; })}>${l}</button>`)}</div>
+          ${f.pointsSystem === 'POINTS' ? html`<div className="pts-grid">${pf.map(([k, l]) => html`<label key=${k} className="pts-row" htmlFor=${'pt-' + k}><span>${l}</span><input className="num" id=${'pt-' + k} type="number" value=${f.points[k]} onChange=${(e) => set((x) => { x.points[k] = parseInt(e.target.value, 10) || 0; })} /></label>`)}</div>`
+            : html`<p className="hint">${f.pointsSystem === 'AWARDED' ? 'I punti si inseriscono a mano nella classifica di ogni fase.' : 'La classifica si ordina solo con i criteri di spareggio.'}</p>`}
         </div>
-        <div>
-          <div className="sub-t">Criteri di spareggio, in ordine</div>
+        ${sport.sets ? html`<div className="rule-box">
+          <h3><span className="rn">2</span>Set per partita</h3>
+          <div className="bo-pick">${[1, 3, 5].map((n) => html`<button key=${n} className=${f.bestOf === n ? 'on' : ''} aria-pressed=${f.bestOf === n} onClick=${() => set((x) => { x.bestOf = n; })}><b>${n}</b><span>${n === 1 ? 'set secco' : `al meglio dei ${n}`}</span></button>`)}</div>
+          <p className="hint">Vince chi arriva a ${Math.ceil(f.bestOf / 2)} ${Math.ceil(f.bestOf / 2) === 1 ? 'set' : 'set vinti'}. Il tie-break (7-6) o il super tie-break (10-8) si inseriscono come un set.</p>
+        </div>` : null}
+        <div className="rule-box wide">
+          <h3><span className="rn">${sport.sets ? 3 : 2}</span>Criteri di spareggio</h3>
+          <p className="hint" style=${{ marginTop: 0 }}>A parità di punti si guardano in quest’ordine. Trascina per cambiare l’ordine.</p>
           <ol className="tb-list">${f.tiebreakers.map((t, i) => html`<li key=${t.rule + t.scope} ...${sortP('tb', i)}>
             <span className="handle" aria-hidden="true">⠿</span><span className="rk">${i + 1}</span>
             <span className="nm">${tbName(t, f.tiebreakers, st.tournament.sport)}</span>
             <button className="icon-btn" aria-label="Rimuovi" onClick=${() => set((x) => { x.tiebreakers.splice(i, 1); })}>×</button></li>`)}</ol>
-          <span className="hint">Trascina i criteri per cambiare l’ordine: si applicano dall’alto verso il basso.</span>
           <div className="row">
             <select id="tb-rule" aria-label="Criterio" value=${newRule} onChange=${(e) => setNewRule(e.target.value)}>
               ${rules.filter((r) => !f.tiebreakers.some((t) => t.rule === r && t.scope === 'O')).map((r) => html`<option key=${r} value=${r}>${ruleName(r, st.tournament.sport)}</option>`)}
@@ -1923,15 +2031,18 @@ li.sortable .handle { color: #9CA3AF; }
             <${Btn} onClick=${() => set((x) => { const sel = document.getElementById('tb-rule').value; if (!sel) return; if (sel === 'H2H') { const d = (TE.DEFAULT_TIEBREAKERS[st.tournament.sport].find(([, sc]) => sc === 'H') || ['POINTS'])[0]; x.tiebreakers.push({ rule: d, scope: 'H' }); } else if (!x.tiebreakers.some((t) => t.rule === sel && t.scope === 'O')) x.tiebreakers.push({ rule: sel, scope: 'O' }); })}>Aggiungi criterio<//>
             <${Btn} kind="ghost" onClick=${() => set((x) => { x.tiebreakers = TE.DEFAULT_TIEBREAKERS[st.tournament.sport].map(([rule, scope]) => ({ rule, scope })); })}>Usa i criteri del ${sport.label}<//>
           </div>
-          <p className="hint">“Scontro diretto” confronta solo le partite giocate tra le squadre a pari merito. Tutti gli altri criteri valgono su tutte le partite della fase.</p>
-          <p className="hint">Le classifiche che confrontano squadre di gironi diversi (generale, migliori k-esime) usano le medie per partita. Le parità rimaste dopo l’ultimo criterio le ordina l’organizzatore quando conferma la fase.</p>
+          <p className="hint">“Scontro diretto” guarda solo le partite tra le squadre a pari merito. Se resta una parità, la risolvi a mano quando confermi la fase.</p>
         </div>
-        <div>
-          <div className="sub-t">Colonne delle classifiche</div>
-          <div className="checks">${Object.entries(TE.COLUMNS).filter(([k]) => sport.sets || !['SF', 'SA', 'SD'].includes(k)).filter(([k]) => sport.ties || k !== 'T').map(([k, l]) => html`<label key=${k} className="check"><input type="checkbox" checked=${f.columns.includes(k)} onChange=${(e) => set((x) => { x.columns = e.target.checked ? Object.keys(TE.COLUMNS).filter((c) => x.columns.includes(c) || c === k) : x.columns.filter((c) => c !== k); })} /> <b>${window.COL_SHORT[k]}</b> ${l}</label>`)}</div>
+        <div className="rule-box wide">
+          <h3><span className="rn">${sport.sets ? 4 : 3}</span>Colonne della classifica</h3>
+          <p className="hint" style=${{ marginTop: 0 }}>Clicca l’intestazione di una colonna per mostrarla o nasconderla. Anteprima con dati di esempio.</p>
+          <div className="tbl-wrap"><table className="tbl col-pick"><thead><tr><th className="n">#</th><th>Squadra</th>
+            ${cols.map((k) => { const on = f.columns.includes(k); return html`<th key=${k} className=${'n' + (on ? ' on' : ' off')}><button onClick=${() => toggleCol(k)} aria-pressed=${on} title=${TE.COLUMNS[k]}><span className="ck">${on ? '✓' : '+'}</span>${window.COL_SHORT[k]}<small>${TE.COLUMNS[k]}</small></button></th>`; })}</tr></thead>
+            <tbody>${SAMPLE_ROWS.map((r, i) => html`<tr key=${r.n}><td className="n">${i + 1}</td><td>${r.n}</td>${cols.map((k) => html`<td key=${k} className=${'n' + (f.columns.includes(k) ? '' : ' off')}>${cell(r, k)}</td>`)}</tr>`)}</tbody></table></div>
+          <p className="hint">Si vedranno ${f.columns.length} colonne: ${f.columns.map((k) => TE.COLUMNS[k].toLowerCase()).join(', ')}.</p>
         </div>
       </div>
-    <//>`;
+    </section>`;
   }
 
   // ---------- Partecipanti ----------
@@ -2289,9 +2400,8 @@ li.sortable .handle { color: #9CA3AF; }
           </div>
         </div>
         <button className=${'map-riep' + (riep ? ' on' : '')} onClick=${() => phases.length && open('riepilogo')} disabled=${!phases.length}>
-          <span className="eb" style=${{ color: 'inherit' }}>Riepilogo</span>
-          ${errN ? html`<b className="warn-t">${errN} ${errN === 1 ? 'problema' : 'problemi'} da correggere</b>` : phases.length ? html`<span><b>${teams} squadre</b> · ${finals.length === 1 ? '1 classifica finale' : `${finals.length} classifiche finali`}: ${finals.map((p) => `${p.name} (1°–${p.entrants.length}°)`).join(', ')}</span>` : html`<b className="warn-t">Aggiungi la prima fase</b>`}
-          <span className="small muted">${excludedN ? `${excludedN} ${excludedN === 1 ? 'squadra esce' : 'squadre escono'} prima, senza entrare in una classifica finale.` : 'Ogni fase senza una fase dopo genera una classifica finale.'}</span>
+          ${errN ? html`<b className="warn-t">${errN} ${errN === 1 ? 'problema' : 'problemi'} da correggere</b>` : phases.length ? html`<span><b>${teams} squadre</b> · ${phases.length} fasi · ${finals.length} ${finals.length === 1 ? 'classifica finale' : 'classifiche finali'}</span>` : html`<b className="warn-t">Aggiungi la prima fase</b>`}
+          <span className="riep-link">Riepilogo →</span>
         </button>
       </div>
     </section>`;
@@ -2378,19 +2488,17 @@ li.sortable .handle { color: #9CA3AF; }
   }
 
   function RiepilogoPanel({ st, cat, graph, open, setView, act, say }) {
-    const { ranges, excluded, finals, excludedN } = placeRanges(cat);
+    const { ranges, excluded } = placeRanges(cat);
     const teams = cat.teams.filter((t) => !t.fromAmericano).length;
+    const phases = TE.sortedPhases(cat);
     const pub = st.tournament.status === 'PUBLISHED';
     return html`<section className="win cut"><div className="add-body">
-      <div className="eb">Riepilogo · ${cat.name}</div>
-      <h2 className="add-h">${teams} squadre · ${finals.length === 1 ? '1 classifica finale' : `${finals.length} classifiche finali`}</h2>
-      <p className="hint" style=${{ margin: 0 }}>Ogni fase che non ha una fase dopo genera una classifica finale. Con più tabelloni finali in parallelo ci sono più classifiche.</p>
-      ${graph.errors.length ? html`<${Note} tone="bad"><b>Da correggere prima di attivare</b><ul>${graph.errors.map((e, i) => html`<li key=${i}>${T(e.msg)}</li>`)}</ul><//>` : html`<${Note} tone="good">La struttura è valida.<//>`}
-      <div className="finals">${finals.map((p) => { const col = branchColor(cat, p); return html`<button key=${p.id} className="final-card" onClick=${() => open(p.id)}><span className="eb">Classifica finale</span><b>${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b><span>${p.entrants.length} squadre · posti 1°–${p.entrants.length}° · #${p.order} ${typeLabel(p.type)}</span></button>`; })}</div>
-      <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Fase</th><th>Tipo</th><th>Prende da</th><th className="n">Squadre</th><th className="n">Partite</th><th>Esito</th></tr></thead><tbody>
-        ${TE.sortedPhases(cat).map((p) => { const r = ranges[p.id]; const col = branchColor(cat, p); const nx = TE.downstreamOf(cat, p); return html`<tr key=${p.id} className="clickrow" onClick=${() => open(p.id)}><td><b>#${p.order} ${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b></td><td>${typeLabel(p.type)}</td><td>${TE.sourcesOf(cat, p).map((s) => `#${s.order} ${s.name}`).join(', ') || 'Squadre iscritte'}</td><td className="n">${p.entrants.length}</td><td className="n">${TE.phaseGames(cat, p.id).length}</td><td>${r ? html`<b className="ok-t">Classifica finale 1°–${r[1]}°</b>` : html`<span>Prosegue in ${nx.map((q) => `#${q.order} ${q.name}`).join(', ')}</span>${excluded[p.id] ? html` <span className="warn-t">· ${excluded[p.id]} escluse</span>` : null}`}</td></tr>`; })}
-      </tbody></table></div>
-      ${excludedN ? html`<p className="hint" style=${{ margin: 0 }}>Le squadre escluse sono le posizioni che nessuna fase successiva usa: escono dal torneo senza entrare in una classifica finale.</p>` : null}
+      <div><h2 className="add-h">Riepilogo di ${cat.name}</h2><p className="muted" style=${{ margin: '6px 0 0' }}>${teams} squadre · ${phases.length} fasi · ${cat.games.length} partite</p></div>
+      ${graph.errors.length ? html`<${Note} tone="bad"><b>Da correggere</b><ul>${graph.errors.map((e, i) => html`<li key=${i}>${T(e.msg)}</li>`)}</ul><//>` : null}
+      <ol className="riep">${phases.map((p) => { const r = ranges[p.id]; const nx = TE.downstreamOf(cat, p); const col = branchColor(cat, p); return html`<li key=${p.id}><button onClick=${() => open(p.id)}>
+        <span className="rp-n">#${p.order}</span>
+        <span className="rp-main"><b>${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b><span className="muted small">${typeLabel(p.type)} · ${p.entrants.length} squadre · ${TE.phaseGames(cat, p.id).length} partite</span></span>
+        <span className="rp-out">${r ? html`<b className="ok-t">Classifica finale</b>` : html`<span>→ ${nx.map((q) => q.name).join(', ')}</span>${excluded[p.id] ? html`<small className="muted">${excluded[p.id]} ${excluded[p.id] === 1 ? 'esce' : 'escono'} qui</small>` : null}`}</span></button></li>`; })}</ol>
       <div className="row"><${Btn} onClick=${() => setView('programma')}>Vai al programma<//>${pub ? null : html`<${Btn} kind="primary bev" disabled=${graph.errors.length > 0} onClick=${() => { act((d) => { d.tournament.status = 'PUBLISHED'; }); say('Torneo attivo: ora puoi inserire i risultati.', 'good'); }}>Attiva torneo →<//>`}</div>
     </div></section>`;
   }
@@ -2404,7 +2512,7 @@ li.sortable .handle { color: #9CA3AF; }
       <div className="win-top">
         <div className="stack" style=${{ gap: 6 }}>
           <div className="eb">Tabellone fase</div>
-          <div className="row"><${Tag} tone="blue">Fase ${phase.order}<//><h2 className="win-title">${phase.type === 'GROUPS' ? 'Fase a gironi' : 'Eliminazione diretta'}</h2><span className="muted small">· ${from.length ? `prende le posizioni da ${from.map((s) => `#${s.order} ${s.name}`).join(', ')}` : 'tutte le squadre iscritte'}</span></div>
+          <div className="row"><${Tag} tone="blue">Fase ${phase.order}<//><input className="win-name" id=${'pn-' + phase.id} aria-label="Nome della fase" title="Clicca per rinominare la fase" value=${phase.name} onChange=${(e) => act((d, c) => { TE.findPhase(c, phase.id).name = e.target.value; })} /><span className="muted small">${phase.type === 'GROUPS' ? 'Fase a gironi' : 'Eliminazione diretta'} · ${from.length ? `prende le posizioni da ${from.map((s) => `#${s.order} ${s.name}`).join(', ')}` : 'tutte le squadre iscritte'}</span></div>
         </div>
         <div className="win-tabs" role="tablist">
           ${sibs.length > 1 || phase.type === 'KNOCKOUT' ? sibs.map((p) => { const col = branchColor(cat, p) || 'var(--blue)'; return html`<button key=${p.id} role="tab" aria-selected=${p.id === phase.id} className=${p.id === phase.id ? 'on' : ''} style=${{ borderBottomColor: p.id === phase.id ? col : 'transparent' }} onClick=${() => open(p.id)}><i className="sq" style=${{ background: col }}></i><b>${p.name}</b> <span className="muted">${p.entrants.length} squadre</span></button>`; }) : null}
@@ -2428,7 +2536,7 @@ li.sortable .handle { color: #9CA3AF; }
       ${next.length ? html`<span className="foot-msg">Le squadre proseguono in ${next.map((p) => `#${p.order} ${p.name}`).join(', ')}</span>
           <button className="btn primary bev" disabled=${bad} onClick=${() => open(next[0].id)}>Vai a #${next[0].order} ${next[0].name} →</button>`
         : html`<button className="btn" disabled=${bad || !phase.built} onClick=${() => onAdd('next', phase.id)}>+ Aggiungi una fase dopo</button>
-          <button className="btn primary bev" disabled=${bad} title="Nessuna fase dopo questa: i suoi piazzamenti sono una classifica finale" onClick=${() => open('riepilogo')}>✓ Fine del ramo · riepilogo →</button>`}
+          <button className="btn primary bev" disabled=${bad} title="Nessuna fase dopo questa: i suoi piazzamenti sono una classifica finale" onClick=${() => open('riepilogo')}>✓ Fine del ramo →</button>`}
     </footer>`;
   }
   const Stepper = ({ id, label, value, min, max, onChange, readOnly, hint }) => html`<div className="field"><span className="field-label" id=${id + '-l'}>${label}</span>
@@ -2750,7 +2858,7 @@ li.sortable .handle { color: #9CA3AF; }
       </aside>
       <div className="win-main">
         <div className="ko-h">
-          <div className="row">${col ? html`<i className="sq lg" style=${{ background: col }}></i>` : null}<span className="b" style=${{ fontSize: 18 }}>Tabellone</span><input className="name" id=${'pn-' + phase.id} aria-label="Nome del tabellone" value=${phase.name} onChange=${(e) => act((d, c) => { TE.findPhase(c, phase.id).name = e.target.value; })} /><span className="muted small">· parte ${ROUND[lay.size] ? ROUND[lay.size][2] : ''}</span></div>
+          <div className="row">${col ? html`<i className="sq lg" style=${{ background: col }}></i>` : null}<span className="b" style=${{ fontSize: 16 }}>Tabellone</span><span className="muted small">· parte ${ROUND[lay.size] ? ROUND[lay.size][2] : ''}</span></div>
           ${cfg.eliminations !== 2 ? html`<div className="row">
             <label className="switch"><span>Finale 3°/4° posto</span><input type="checkbox" role="switch" disabled=${n < 4} checked=${has3} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(3) : s.delete(3); upd({ placements: [...s].sort((a, b) => a - b) }); }} /><i></i></label>
             <details className="more"><summary>Altri piazzamenti</summary><div className="more-pop">${[[5, 8], [7, 8]].map(([pl, min]) => html`<label key=${pl} className="check"><input type="checkbox" disabled=${n < min || (pl === 7 && !cfg.placements.includes(5))} checked=${cfg.placements.includes(pl)} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(pl) : (s.delete(pl), pl === 5 && s.delete(7)); upd({ placements: [...s].sort((x, y) => x - y) }); }} /> Finale ${pl}°/${pl + 1}°</label>`)}<span className="hint">I posti non giocati si decidono con i criteri di spareggio tra chi esce nello stesso turno.</span></div></details>
@@ -2930,8 +3038,14 @@ li.sortable .handle { color: #9CA3AF; }
   function StandingsView(ctx) {
     const { cat } = ctx;
     const phases = TE.sortedPhases(cat).filter((p) => p.built);
-    return html`<div><${PageHead} title="Classifiche" lead="Quando tutte le partite di una fase hanno un risultato, ordini le eventuali parità e confermi: la conferma riempie le fasi successive." />
-      <div className="stack">${phases.length ? phases.map((p) => html`<${PhaseStandings} key=${p.id} ...${ctx} phase=${p} />`) : html`<${Note}>Le classifiche compaiono quando le fasi di ${cat.name} sono configurate.<//>`}</div></div>`;
+    const [pid, setPid] = useState(() => getPref('stand', ''));
+    const phase = phases.find((p) => p.id === pid) || phases[0];
+    const pick = (id) => { setPid(id); setPref('stand', id); };
+    return html`<div><${PageHead} title="Classifiche" lead="Una classifica per ogni fase. Quando una fase è finita la confermi: le squadre passano alla fase successiva." />
+      ${!phases.length ? html`<${Note}>Le classifiche compaiono quando le fasi di ${cat.name} sono configurate.<//>` : html`
+      <div className="phase-tabs" role="tablist">${phases.map((p) => { const s = TE.phaseStatus(ctx.st, cat, p); const col = branchColor(cat, p); return html`<button key=${p.id} role="tab" aria-selected=${p.id === phase.id} className=${p.id === phase.id ? 'on' : ''} onClick=${() => pick(p.id)}>
+        <span className="pt-top">#${p.order} ${col ? html`<i className="sq" style=${{ background: col }}></i>` : null}<b>${p.name}</b></span><span className=${'pt-st st-' + s}>${TE.STATUS_LABEL[s]}</span></button>`; })}</div>
+      <${PhaseStandings} key=${phase.id} ...${ctx} phase=${phase} />`}</div>`;
   }
   function StandingsTable({ rows, cols, nameOf, marked, cat, editAwarded, act }) {
     return html`<div className="tbl-wrap"><table className="tbl"><thead><tr><th className="n">#</th><th>Squadra</th>${cols.map((c) => html`<th key=${c} className="n" title=${TE.COLUMNS[c]}>${window.COL_SHORT[c]}</th>`)}</tr></thead>
@@ -2939,7 +3053,7 @@ li.sortable .handle { color: #9CA3AF; }
         ${cols.map((c) => html`<td key=${c} className="n">${c === 'PTS' && editAwarded ? html`<input className="num" aria-label="Punti assegnati" type="number" value=${(cat.format.awarded || {})[r.id] || 0} onChange=${(e) => act((d, cc) => { cc.format.awarded = cc.format.awarded || {}; cc.format.awarded[r.id] = +e.target.value || 0; })} />` : c === 'PD' || c === 'SD' ? (r[c] > 0 ? '+' : '') + r[c] : r[c]}</td>`)}</tr>`)}</tbody></table></div>`;
   }
   function PhaseStandings(ctx) {
-    const { st, cat, phase, act } = ctx;
+    const { st, cat, phase, act, setView } = ctx;
     const status = TE.phaseStatus(st, cat, phase);
     const nameOf = (id) => TE.participantName(cat, phase, id);
     const used = {};
@@ -2948,21 +3062,23 @@ li.sortable .handle { color: #9CA3AF; }
       else used[s.ranking] = new Set([...(used[s.ranking] || []), ...s.positions]);
     }));
     const cols = cat.format.columns;
-    const props = { eb: `#${phase.order} · ${typeLabel(phase.type)}`, title: phase.name, actions: html`<${StatusTag} st=${st} cat=${cat} phase=${phase} />` };
-    if (status === 'READY') return html`<${Card} ...${props}><${Note}>Parte quando ${TE.sourcesOf(cat, phase).filter((s) => !s.confirmed).map((s) => s.name).join(', ')} viene confermata.<//><//>`;
+    const next = TE.downstreamOf(cat, phase);
+    if (status === 'READY') return html`<section className="card cut"><${Note}>La classifica parte quando ${TE.sourcesOf(cat, phase).filter((s) => !s.confirmed).map((s) => s.name).join(', ')} ${TE.sourcesOf(cat, phase).filter((s) => !s.confirmed).length > 1 ? 'vengono confermate' : 'viene confermata'}.<//></section>`;
     let body;
     if (phase.type === 'GROUPS') {
-      const crossIds = TE.rankingCatalog(cat, phase).filter((r) => r.id.startsWith('cross:'));
-      body = html`<div className="pools" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>${phase.pools.map((p) => html`<div key=${p.number}><div className="sub-t">${poolName(cat, phase, p)}</div><${StandingsTable} rows=${TE.ranking(st, cat, phase, `pool:${p.number}`)} cols=${cols} cat=${cat} act=${act} editAwarded=${cat.format.pointsSystem === 'AWARDED'} nameOf=${nameOf} marked=${used[`pool:${p.number}`]} /></div>`)}</div>
-        ${phase.inheritPoints ? html`<${Note}>Include punti e statistiche portati dalla fase precedente.<//>` : null}
-        ${phase.pools.length > 1 ? html`<details className="disc" open=${Object.keys(used).some((k) => k.startsWith('cross:'))}><summary>Classifiche tra gironi (medie per partita)</summary><div className="pools" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>${crossIds.map((r) => html`<div key=${r.id}><div className="sub-t">${T(r.label)}</div><${StandingsTable} rows=${TE.ranking(st, cat, phase, r.id)} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used[r.id]} /></div>`)}</div></details>` : null}
-        <details className="disc" open=${!!used.overall}><summary>Classifica generale (medie per partita)</summary><${StandingsTable} rows=${TE.ranking(st, cat, phase, 'overall')} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used.overall} /></details>`;
+      const usedOther = Object.keys(used).filter((k) => !k.startsWith('pool:'));
+      body = html`<div className="pools" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>${phase.pools.map((p) => html`<div key=${p.number}><div className="sub-t">${poolName(cat, phase, p)}</div><${StandingsTable} rows=${TE.ranking(st, cat, phase, `pool:${p.number}`)} cols=${cols} cat=${cat} act=${act} editAwarded=${cat.format.pointsSystem === 'AWARDED'} nameOf=${nameOf} marked=${used[`pool:${p.number}`]} /></div>`)}</div>
+        ${usedOther.map((rid) => { const def = TE.rankingCatalog(cat, phase).find((r) => r.id === rid); const to = next.filter((n) => n.entrants.some((e) => e.source.fromPhase === phase.id && e.source.ranking === rid)).map((n) => n.name).join(', '); return html`<div key=${rid}><div className="sub-t">${T(def ? def.label : rid)} <span className="muted" style=${{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>· serve per ${to}</span></div><${StandingsTable} rows=${TE.ranking(st, cat, phase, rid)} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used[rid]} /></div>`; })}`;
     } else {
-      body = html`<${KoBoard} st=${st} cat=${cat} phase=${phase} onGame=${(g) => openResult(ctx, g)} />
-        <div className="sub-t" style=${{ marginTop: 16 }}>Piazzamenti finali</div><${StandingsTable} rows=${TE.ranking(st, cat, phase, 'final')} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used.final} />
-        <p className="hint">Prima i posti decisi in campo; le squadre eliminate nello stesso turno sono ordinate con i criteri di spareggio, poi per ordine di ingresso nel tabellone. “–” = ancora in gioco.</p>`;
+      body = html`<${StandingsTable} rows=${TE.ranking(st, cat, phase, 'final')} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used.final} />
+        <p className="hint" style=${{ margin: 0 }}>Il tabellone con le partite è in <button className="linkbtn" onClick=${() => setView('risultati')}>Risultati</button>. “–” = ancora in gioco.</p>`;
     }
-    return html`<${Card} ...${props}><div className="stack">${body}</div><${ConfirmPanel} ...${ctx} /><//>`;
+    return html`<section className="card cut">
+      <header className="card-h"><div><div className="eb">${typeLabel(phase.type)}${next.length ? ` · prosegue in ${next.map((n) => n.name).join(', ')}` : ' · classifica finale'}</div><h2>${phase.name}</h2></div><${StatusTag} st=${st} cat=${cat} phase=${phase} /></header>
+      <div className="stack">${body}</div>
+      ${next.length ? html`<p className="hint" style=${{ margin: '10px 0 0' }}>In verde le posizioni che passano alla fase successiva.</p>` : null}
+      <${ConfirmPanel} ...${ctx} />
+    </section>`;
   }
   function ConfirmPanel({ st, cat, phase, act, say }) {
     const status = TE.phaseStatus(st, cat, phase);
@@ -3016,34 +3132,115 @@ li.sortable .handle { color: #9CA3AF; }
 
   // ---------- Programma ----------
   function ScheduleView(ctx) {
-    const { st, sport, act } = ctx;
-    return html`<div><${PageHead} title="Programma" lead=${`Riposo minimo tra due partite della stessa squadra: ${st.tournament.restMinutes} min (si cambia in Informazioni).`} />
+    const { st, act } = ctx;
+    const mode = st.tournament.scheduling;
+    return html`<div><${PageHead} title="Programma" lead="Decidi quando e su quale campo si gioca ogni partita." />
       ${!st.venues.length ? html`<${Note}>Aggiungi prima una struttura in Campi di gioco.<//>` : html`<div className="stack">
-      <${Card} eb="Come si programmano le partite">
-        <div className="seg" role="radiogroup">${[['FIXED', 'Campi e orari assegnati'], ['QUEUE', 'Primo campo libero']].map(([k, l]) => html`<button key=${k} role="radio" aria-checked=${st.tournament.scheduling === k} className=${st.tournament.scheduling === k ? 'on' : ''} onClick=${() => act((d) => { d.tournament.scheduling = k; if (k === 'QUEUE' && !Object.keys(d.schedule.courts).length) TE.allSpaces(d).forEach((s) => { d.schedule.courts[s.id] = null; }); })}>${l}</button>`)}</div>
-        <p className="hint">${st.tournament.scheduling === 'FIXED' ? 'Ogni partita riceve subito orario e campo. Una fase si programma dopo le fasi da cui prende squadre.' : 'Le partite aspettano in coda: ogni partita finita libera il campo per la prossima pronta. Consigliato per il padel.'}</p>
-      <//>
-      ${st.tournament.scheduling === 'FIXED' ? html`<${FixedSchedule} ...${ctx} />` : html`<${QueueSchedule} ...${ctx} />`}
+      <div className="mode-pick">${[['FIXED', 'Calendario con orari', 'Ogni partita ha un campo e un orario. Le sposti trascinandole nel calendario.'], ['QUEUE', 'In coda, dal vivo', 'Nessun orario fisso: quando un campo si libera ci va la prossima partita pronta. Utile quando la durata delle partite è imprevedibile, come nel padel.']].map(([k, l, d]) => html`<button key=${k} className=${'mode' + (mode === k ? ' on' : '')} aria-pressed=${mode === k} onClick=${() => act((x) => { x.tournament.scheduling = k; if (k === 'QUEUE' && !Object.keys(x.schedule.courts).length) TE.allSpaces(x).forEach((s) => { x.schedule.courts[s.id] = null; }); if (k === 'QUEUE' && !x.schedule.queue.length) TE.buildQueue(x); })}><b>${l}</b><span>${d}</span></button>`)}</div>
+      ${mode === 'FIXED' ? html`<${ScheduleMatrix} ...${ctx} />` : html`<${QueueSchedule} ...${ctx} />`}
     </div>`}</div>`;
   }
-  function FixedSchedule({ st, act, say }) {
+  const PH_COLORS = ['#2B63F1', '#D97706', '#7C3AED', '#059669', '#DB2777', '#0891B2', '#65A30D', '#9333EA'];
+  const toMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+  const toHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  function ScheduleMatrix(ctx) {
+    const { st, act, say } = ctx;
+    const s = st.schedule;
+    const SLOT = 30;
+    const days = [...new Set(s.blocks.map((b) => b.day))].sort();
+    const [day0, setDay] = useState(null);
+    const day = days.includes(day0) ? day0 : days[0];
+    const [flt, setFlt] = useState({});
+    const [over, setOver] = useState(null);
+    const [showBlocks, setShowBlocks] = useState(!s.blocks.length);
+    const spaces = TE.allSpaces(st);
+    const allPhases = st.categories.flatMap((c) => TE.sortedPhases(c).map((p) => ({ c, p })));
+    const color = Object.fromEntries(allPhases.map(({ p }, i) => [p.id, PH_COLORS[i % PH_COLORS.length]]));
+    const games = st.categories.flatMap((c) => c.games.filter((g) => TE.isNeeded(st, c, g) || g.status !== 'SCHEDULED').map((g) => ({ c, g, p: TE.findPhase(c, g.phaseId) })));
+    const flagged = (x) => !Object.keys(flt).length || flt['c:' + x.c.id] || flt['p:' + x.p.id];
+    const lenOf = (x) => TE.gameLengthFor(st, x.c, x.p);
+    const dayBlocks = s.blocks.filter((b) => b.day === day);
+    const dStart = dayBlocks.length ? Math.min(...dayBlocks.map((b) => toMin(b.start))) : 540;
+    const dEnd = dayBlocks.length ? Math.max(...dayBlocks.map((b) => toMin(b.end))) : 1200;
+    const N = Math.max(1, Math.ceil((dEnd - dStart) / SLOT));
+    const rows = spaces.filter((sp) => dayBlocks.some((b) => b.spaceIds.includes(sp.id)));
+    const open = (sid, m, len) => dayBlocks.some((b) => b.spaceIds.includes(sid) && m >= toMin(b.start) && m + len <= toMin(b.end));
+    const placed = games.filter((x) => s.assignments[x.g.id] && s.assignments[x.g.id].day === day);
+    const unplaced = games.filter((x) => !s.assignments[x.g.id] && x.g.status === 'SCHEDULED');
+    // squadre in campo contemporaneamente (solo dove le squadre sono già note)
+    const rest = +st.tournament.restMinutes || 0;
+    const clash = {};
+    placed.forEach((a) => { const A = s.assignments[a.g.id]; const ta = TE.sidesOf(st, a.c, a.g); const pa = [...(ta.home || []), ...(ta.away || [])]; if (!pa.length) return;
+      placed.forEach((b) => { if (a === b) return; const B = s.assignments[b.g.id]; const tb = TE.sidesOf(st, b.c, b.g); const pb = [...(tb.home || []), ...(tb.away || [])];
+        if (!pa.some((x) => pb.includes(x))) return;
+        if (toMin(A.start) < toMin(B.end) + rest && toMin(B.start) < toMin(A.end) + rest) clash[a.g.id] = rest ? `Stessa squadra in campo o senza ${rest} min di pausa con #${b.g.number}` : `Stessa squadra in campo insieme a #${b.g.number}`; }); });
+    const move = (gid, sid, m) => act((d) => {
+      const f = TE.findGame(d, gid); if (!f) return;
+      const p = TE.findPhase(f.cat, f.game.phaseId); const len = TE.gameLengthFor(d, f.cat, p);
+      if (!open(sid, m, len)) { say('Fuori dagli orari di quel campo: allunga la giornata in “Giorni, orari e campi”.', 'warn'); return; }
+      const A = d.schedule.assignments; const old = A[gid];
+      const hits = Object.entries(A).filter(([id, a]) => id !== gid && a.day === day && a.spaceId === sid && toMin(a.start) < m + len && m < toMin(a.end));
+      if (hits.length > 1 || (hits.length === 1 && toMin(hits[0][1].start) !== m)) { say('Il campo è occupato in quell’orario.', 'warn'); return; }
+      if (hits.length === 1) { const [oid] = hits[0]; if (old) { const of = TE.findGame(d, oid); const olen = TE.gameLengthFor(d, of.cat, TE.findPhase(of.cat, of.game.phaseId)); A[oid] = { spaceId: old.spaceId, day: old.day, start: old.start, end: toHHMM(toMin(old.start) + olen) }; } else delete A[oid]; }
+      A[gid] = { spaceId: sid, day, start: toHHMM(m), end: toHHMM(m + len) };
+      d.schedule.unplaced = d.schedule.unplaced.filter((x) => x !== gid);
+    });
+    const unassign = (gid) => act((d) => { delete d.schedule.assignments[gid]; });
+    const drop = (sid, m) => ({
+      onDragOver: (e) => { if (DRAG && DRAG.from === 'game') { e.preventDefault(); const k = sid + '@' + m; if (over !== k) setOver(k); } },
+      onDragLeave: () => setOver(null),
+      onDrop: (e) => { e.preventDefault(); const d = DRAG; DRAG = null; setOver(null); if (d && d.from === 'game') move(d.id, sid, m); },
+    });
+    const drag = (gid) => ({ draggable: 'true', onDragStart: (e) => { DRAG = { from: 'game', id: gid }; try { e.dataTransfer.setData('text/plain', 'x'); e.dataTransfer.effectAllowed = 'move'; } catch (x) { /* ignora */ } }, onDragEnd: () => { DRAG = null; setOver(null); } });
+    const label = (x) => { const lay = x.p && x.p.type === 'KNOCKOUT' ? koLayout(x.c, x.p) : null; const code = lay ? lay.codes[x.g.number] : null; const pool = x.g.pool ? poolName(x.c, x.p, { number: x.g.pool }) : null; return code || pool || T(x.g.label); };
+    const sideTxt = (x, side) => { const lay = x.p && x.p.type === 'KNOCKOUT' ? koLayout(x.c, x.p) : null; return srcLabel(st, x.c, x.g[side], lay && lay.codes).text; };
+    const gameCard = (x, style) => html`<div key=${x.g.id} className=${'gcard' + (flagged(x) ? '' : ' dim') + (clash[x.g.id] ? ' clash' : '') + (x.g.status !== 'SCHEDULED' ? ' done' : '')} style=${Object.assign({ borderLeftColor: color[x.p.id] }, style || {})} title=${clash[x.g.id] || `${x.c.name} · ${x.p.name} · ${label(x)}`} ...${drag(x.g.id)} ...${style ? drop(s.assignments[x.g.id].spaceId, toMin(s.assignments[x.g.id].start)) : {}}>
+      <span className="gc-top"><b>${style ? s.assignments[x.g.id].start : '#' + x.g.number}</b><span>${x.p.name} · ${label(x)}</span></span>
+      <span className="gc-t">${sideTxt(x, 'home')}</span><span className="gc-t">${sideTxt(x, 'away')}</span></div>`;
+    const flag = (k, txt, col) => html`<button key=${k} className=${'flag' + (flt[k] ? ' on' : '')} aria-pressed=${!!flt[k]} onClick=${() => { const n = Object.assign({}, flt); if (n[k]) delete n[k]; else n[k] = true; setFlt(n); }}>${col ? html`<i className="sq" style=${{ background: col }}></i>` : null}${txt}</button>`;
+    return html`<div className="stack">
+      <section className="card cut">
+        <div className="sched-bar">
+          <div className="row">${days.map((d) => html`<button key=${d} className=${'day-tab' + (d === day ? ' on' : '')} onClick=${() => setDay(d)}>${new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}</button>`)}
+            <button className="btn sm" onClick=${() => setShowBlocks(!showBlocks)}>${showBlocks ? 'Chiudi' : 'Giorni, orari e campi'}</button></div>
+          <div className="row">
+            <label className="row small" htmlFor="rest-min" style=${{ gap: 6 }}><span>Pausa minima tra due partite di una squadra</span><input id="rest-min" className="num" type="number" min="0" step="5" value=${st.tournament.restMinutes} onChange=${(e) => act((d) => { d.tournament.restMinutes = Math.max(0, +e.target.value || 0); })} /><span className="muted">min</span></label>
+            <${Btn} kind="primary sm" disabled=${!s.blocks.length} onClick=${() => ask2(ctx, () => { const r = act((d) => TE.generateFixedSchedule(d)); say(r.unplaced ? `${r.placed} partite messe in calendario, ${r.unplaced} non ci stanno.` : `Tutte le ${r.placed} partite in calendario.`, r.unplaced ? 'warn' : 'good'); })}>Riempi in automatico<//>
+          </div>
+        </div>
+        ${showBlocks ? html`<${BlocksEditor} ...${ctx} />` : null}
+        <div className="flags"><span className="field-label">Evidenzia</span>${st.categories.map((c) => flag('c:' + c.id, c.name))}${allPhases.map(({ c, p }) => flag('p:' + p.id, `${st.categories.length > 1 ? c.name + ' · ' : ''}${p.name}`, color[p.id]))}${Object.keys(flt).length ? html`<button className="linkbtn" onClick=${() => setFlt({})}>Mostra tutto</button>` : null}</div>
+        ${Object.keys(clash).length ? html`<${Note} tone="warn">${Object.keys(clash).length} partite hanno una squadra impegnata in due posti, o senza la pausa minima: sono bordate di rosso.<//>` : null}
+        ${!rows.length ? html`<${Note}>Aggiungi una giornata con i campi in “Giorni, orari e campi”.<//>` : html`<div className="matrix-wrap"><div className="matrix" style=${{ gridTemplateColumns: `150px repeat(${N}, 60px)`, gridTemplateRows: `34px repeat(${rows.length}, 78px)` }}>
+          <div className="mx-corner">Campo</div>
+          ${Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; return html`<div key=${'h' + i} className=${'mx-time' + (m % 60 ? ' half' : '')} style=${{ gridColumn: i + 2, gridRow: 1 }}>${m % 60 ? '' : toHHMM(m)}</div>`; })}
+          ${rows.map((sp, r) => html`<div key=${'r' + sp.id} className="mx-court" style=${{ gridRow: r + 2, gridColumn: 1 }}><b>${sp.name}</b><small>${sp.venue}</small></div>`)}
+          ${rows.flatMap((sp, r) => Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; const ok = open(sp.id, m, SLOT); return html`<div key=${sp.id + i} className=${'mx-cell' + (ok ? '' : ' closed') + (m % 60 ? ' half' : '') + (over === sp.id + '@' + m ? ' over' : '')} style=${{ gridRow: r + 2, gridColumn: i + 2 }} ...${ok ? drop(sp.id, m) : {}}></div>`; }))}
+          ${placed.map((x) => { const a = s.assignments[x.g.id]; const r = rows.findIndex((sp) => sp.id === a.spaceId); if (r < 0) return null; const c0 = Math.round((toMin(a.start) - dStart) / SLOT); const span = Math.max(1, Math.round((toMin(a.end) - toMin(a.start)) / SLOT)); return gameCard(x, { gridRow: r + 2, gridColumn: `${c0 + 2} / span ${span}` }); })}
+        </div></div>`}
+      </section>
+      <section className=${'card cut tray' + (over === 'tray' ? ' over' : '')} onDragOver=${(e) => { if (DRAG && DRAG.from === 'game') { e.preventDefault(); setOver('tray'); } }} onDrop=${(e) => { e.preventDefault(); const d = DRAG; DRAG = null; setOver(null); if (d && d.from === 'game') unassign(d.id); }}>
+        <header className="card-h"><div><div className="eb">Da mettere in calendario</div><p>${unplaced.length ? `${unplaced.length} partite senza orario. Trascinale in una cella del calendario; per togliere una partita dal calendario riportala qui.` : 'Tutte le partite hanno un orario. Per togliere una partita dal calendario trascinala qui.'}</p></div></header>
+        <div className="tray-list">${unplaced.map((x) => gameCard(x))}</div>
+      </section>
+    </div>`;
+  }
+  // "Riempi in automatico" sostituisce gli spostamenti fatti a mano: chiedi conferma se ce ne sono
+  function ask2(ctx, fn) { const n = Object.keys(ctx.st.schedule.assignments).length; return n ? ctx.ask('Riempire il calendario in automatico?', 'Le partite vengono ridistribuite su campi e orari: gli spostamenti fatti a mano si perdono.', 'Riempi', fn) : fn(); }
+  function BlocksEditor({ st, act }) {
     const spaces = TE.allSpaces(st);
     const s = st.schedule;
-    const rows = Object.entries(s.assignments).map(([gid, a]) => { const f = TE.findGame(st, gid); return f && Object.assign({ f }, a); }).filter(Boolean).sort((x, y) => (x.day + x.start).localeCompare(y.day + y.start) || spaces.findIndex((q) => q.id === x.spaceId) - spaces.findIndex((q) => q.id === y.spaceId));
-    return html`<${Card} eb="Fasce orarie" sub="Quando si può giocare e su quali campi." actions=${html`<${Btn} kind="primary" disabled=${!s.blocks.length} onClick=${() => { const r = act((d) => TE.generateFixedSchedule(d)); say(r.unplaced ? `${r.placed} partite programmate, ${r.unplaced} non ci stanno.` : `Tutte le ${r.placed} partite programmate.`, r.unplaced ? 'warn' : 'good'); }}>Genera programma<//>`}>
-        <div className="stack">
-        ${s.blocks.map((b, i) => html`<div key=${b.id} className="row">
-          <input aria-label="Giorno" type="date" value=${b.day} onChange=${(e) => act((d) => { d.schedule.blocks[i].day = e.target.value; })} />
-          <input aria-label="Inizio" type="time" value=${b.start} onChange=${(e) => act((d) => { d.schedule.blocks[i].start = e.target.value; })} />
-          <input aria-label="Fine" type="time" value=${b.end} onChange=${(e) => act((d) => { d.schedule.blocks[i].end = e.target.value; })} />
-          <div className="checks">${spaces.map((sp) => html`<label key=${sp.id} className="check"><input type="checkbox" checked=${b.spaceIds.includes(sp.id)} onChange=${(e) => act((d) => { const bb = d.schedule.blocks[i]; bb.spaceIds = e.target.checked ? [...bb.spaceIds, sp.id] : bb.spaceIds.filter((x) => x !== sp.id); })} /> ${sp.name}</label>`)}</div>
-          <button className="icon-btn" aria-label="Rimuovi fascia" onClick=${() => act((d) => { d.schedule.blocks.splice(i, 1); })}>×</button></div>`)}
-        <div className="row"><${Btn} onClick=${() => act((d) => { const last = d.schedule.blocks[d.schedule.blocks.length - 1]; d.schedule.blocks.push({ id: TE.uid('blk'), day: last ? last.day : '2026-11-07', start: '09:00', end: '18:00', spaceIds: TE.allSpaces(d).map((x) => x.id) }); })}>Aggiungi fascia oraria<//><span className="hint">La durata delle partite si imposta per fase (Fasi → Struttura).</span></div>
-        ${s.unplaced.length ? html`<${Note} tone="warn">${s.unplaced.length} partite non ci stanno. Allunga una fascia, aggiungi un campo o accorcia le partite, poi rigenera.<//>` : null}
-        ${rows.length ? html`<div className="tbl-wrap"><table className="tbl"><thead><tr><th>Giorno</th><th>Orario</th><th>Campo</th><th>Categoria</th><th className="n">#</th><th>Partita</th></tr></thead><tbody>
-          ${rows.map((r) => html`<tr key=${r.f.game.id}><td>${r.day}</td><td className="n">${r.start}–${r.end}</td><td>${(spaces.find((q) => q.id === r.spaceId) || {}).name}</td><td>${r.f.cat.name}</td><td className="n">${r.f.game.number}</td><td><span className="muted">${T(r.f.game.label)}</span> ${T(TE.sourceLabel(st, r.f.cat, r.f.game.home))} – ${T(TE.sourceLabel(st, r.f.cat, r.f.game.away))}</td></tr>`)}</tbody></table></div>` : null}
-        </div>
-      <//>`;
+    return html`<div className="blocks">
+      <div className="sub-t">Giorni, orari e campi</div>
+      ${s.blocks.map((b, i) => html`<div key=${b.id} className="row block-row">
+        <input aria-label="Giorno" type="date" value=${b.day} onChange=${(e) => act((d) => { d.schedule.blocks[i].day = e.target.value; })} />
+        <input aria-label="Inizio" type="time" value=${b.start} onChange=${(e) => act((d) => { d.schedule.blocks[i].start = e.target.value; })} /><span>–</span>
+        <input aria-label="Fine" type="time" value=${b.end} onChange=${(e) => act((d) => { d.schedule.blocks[i].end = e.target.value; })} />
+        <div className="checks">${spaces.map((sp) => html`<label key=${sp.id} className="check"><input type="checkbox" checked=${b.spaceIds.includes(sp.id)} onChange=${(e) => act((d) => { const bb = d.schedule.blocks[i]; bb.spaceIds = e.target.checked ? [...bb.spaceIds, sp.id] : bb.spaceIds.filter((x) => x !== sp.id); })} /> ${sp.name}</label>`)}</div>
+        <button className="icon-btn" aria-label="Togli" onClick=${() => act((d) => { d.schedule.blocks.splice(i, 1); })}>×</button></div>`)}
+      <div className="row"><${Btn} kind="sm" onClick=${() => act((d) => { const last = d.schedule.blocks[d.schedule.blocks.length - 1]; const nd = last ? new Date(Date.parse(last.day + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10) : '2026-11-07'; d.schedule.blocks.push({ id: TE.uid('blk'), day: nd, start: '09:00', end: '20:00', spaceIds: TE.allSpaces(d).map((x) => x.id) }); })}>+ Aggiungi una giornata<//>
+        <span className="hint">La durata stimata delle partite si imposta in ogni fase.</span></div>
+    </div>`;
   }
   function QueueSchedule(ctx) {
     const { st, act, say } = ctx;
@@ -3065,7 +3262,7 @@ li.sortable .handle { color: #9CA3AF; }
     // riordina le partite visibili mantenendo le altre al loro posto
     const sortP = useSortable((list, from, to) => act((d) => { const q = d.schedule.queue; const shown = queue.map((x) => x.game.id); const pos = shown.map((id) => q.indexOf(id)); moveArr(shown, from, to); pos.forEach((p, k) => { q[p] = shown[k]; }); }));
     return html`<div className="stack">
-      <${Card} eb="Campi in uso" actions=${html`<label className="check"><input type="checkbox" checked=${s.auto} onChange=${(e) => act((d) => { d.schedule.auto = e.target.checked; if (e.target.checked) TE.fillCourts(d); })} /> Assegnazione automatica</label><${Btn} kind="sm" onClick=${() => act((d) => { TE.fillCourts(d); })}>Riempi i campi liberi<//>`}>
+      <${Card} eb="Campi in uso" actions=${html`<label className="check"><input type="checkbox" checked=${s.auto} onChange=${(e) => act((d) => { d.schedule.auto = e.target.checked; if (e.target.checked) TE.fillCourts(d); })} /> Manda in campo da sola la prossima partita pronta</label><${Btn} kind="sm" onClick=${() => act((d) => { TE.fillCourts(d); })}>Riempi i campi liberi<//>`}>
         <div className="checks">${spaces.map((sp) => html`<label key=${sp.id} className="check"><input type="checkbox" checked=${sp.id in s.courts} onChange=${(e) => act((d) => { if (e.target.checked) d.schedule.courts[sp.id] = null; else delete d.schedule.courts[sp.id]; })} /> ${sp.name}</label>`)}</div>
         <div className="courts">${spaces.filter((sp) => sp.id in s.courts).map((sp) => { const gid = s.courts[sp.id]; const f = gid && TE.findGame(st, gid); return html`<div key=${sp.id} className=${'court' + (f ? ' busy' : '')}>
           <div className="row" style=${{ justifyContent: 'space-between' }}><b>${sp.name}</b>${f ? html`<${Tag} tone="blue">In gioco<//>` : html`<${Tag}>Libero<//>`}</div>
