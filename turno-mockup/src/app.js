@@ -238,7 +238,7 @@
       setBulk('');
     }
     return html`<div>
-      <${PageHead} title="Partecipanti" lead=${`Le teste di serie decidono la composizione dei gironi e l’ordine del tabellone (1 = la più forte).${sport.players ? ' Ogni squadra è una coppia.' : ''}`} />
+      <${PageHead} title="Partecipanti" lead=${`Le squadre iscritte alla categoria.${sport.players ? ' Ogni squadra è una coppia.' : ''} La composizione dei gironi e dei tabelloni si decide nella pagina Fasi, trascinando le squadre.`} />
       <div className="stack">
         <${Card} eb="Aggiungi squadre">
           <${Field} label="Una squadra per riga" id="bulk" hint=${sport.players ? 'Scrivi “Cognome / Cognome” per compilare i due giocatori.' : null}>
@@ -246,14 +246,12 @@
           <div className="row" style=${{ marginTop: 10 }}><${Btn} kind="primary" onClick=${add}>Salva<//><span className="muted small">${list.length} / 128</span></div>
         <//>
         <${Card} eb=${`${list.length} squadre · ${cat.name}`}>
-          ${list.length ? html`<div className="tbl-wrap"><table className="tbl"><thead><tr><th className="n">Testa di serie</th><th>Nome</th>${sport.players ? html`<th>Giocatore 1</th><th>Giocatore 2</th>` : null}<th></th></tr></thead><tbody>
+          ${list.length ? html`<div className="tbl-wrap"><table className="tbl"><thead><tr><th>Nome</th>${sport.players ? html`<th>Giocatore 1</th><th>Giocatore 2</th>` : null}<th></th></tr></thead><tbody>
             ${list.map((t) => html`<tr key=${t.id}>
-              <td className="n"><input className="num" id=${'seed-' + t.id} aria-label="Testa di serie" type="number" min="1" value=${t.seed || ''} onChange=${(e) => act((d, c) => { c.teams.find((x) => x.id === t.id).seed = +e.target.value || null; })} /></td>
               <td><input id=${'nm-' + t.id} aria-label="Nome" value=${t.name} onChange=${(e) => act((d, c) => { c.teams.find((x) => x.id === t.id).name = e.target.value; c.phases.forEach((p) => p.entrants.forEach((en) => { if (en.source.team === t.id) en.label = e.target.value; })); })} /></td>
               ${sport.players ? [0, 1].map((k) => html`<td key=${k}><input aria-label=${'Giocatore ' + (k + 1)} value=${(t.players[k] || {}).name || ''} placeholder="Giocatore" onChange=${(e) => act((d, c) => { const tt = c.teams.find((x) => x.id === t.id); if (!tt.players[k]) tt.players[k] = { id: TE.uid('pl'), name: '' }; tt.players[k].name = e.target.value; })} /></td>`) : null}
               <td className="n"><button className="icon-btn" aria-label="Rimuovi" onClick=${() => changed((d, c) => { c.teams = c.teams.filter((x) => x.id !== t.id); }, `${t.name} rimossa.`)}>×</button></td>
-            </tr>`)}</tbody></table></div>
-            <div className="row" style=${{ marginTop: 12 }}><${Btn} onClick=${() => changed(() => {}, 'Teste di serie applicate alle prime fasi.')}>Applica teste di serie<//><span className="hint">Hanno effetto quando le prime fasi vengono rigenerate.</span></div>`
+            </tr>`)}</tbody></table></div>`
           : html`<${Note}>Nessuna squadra. Incolla un elenco qui sopra.<//>`}
         <//>
       </div></div>`;
@@ -643,10 +641,10 @@
             <div className="pchips">${ps.items.map((i) => html`<span key=${kid(i.k)} className=${'pchip' + (i.owner ? ' used' : pv.has(kid(i.k)) ? '' : ' idle')} title=${i.owner ? `già in ${i.owner.name}` : pv.has(kid(i.k)) ? 'entra nella nuova fase' : 'libera, la puoi aggiungere dopo'}>${posLabel(cat, i.k)}${i.owner ? html` <small>· ${i.owner.name}</small>` : null}</span>`)}</div>
           </div>`)}
           <p className="hint" style=${{ margin: 0 }}>In verde le posizioni che entrano subito: poi le cambi trascinandole. Quelle che nessuna fase usa escono dal torneo.</p>
-        </div>` : html`<p className="hint" style=${{ margin: 0 }}>È la prima fase: entrano tutte le ${teams} squadre iscritte, in ordine di testa di serie.</p>`}
+        </div>` : html`<p className="hint" style=${{ margin: 0 }}>È la prima fase: entrano tutte le ${teams} squadre iscritte, nell’ordine dell’elenco.</p>`}
         <div className="opts">
-          ${opt('GROUPS', 'Fase a gironi', '▦', [needSrc ? 'Le posizioni entrano nei gironi a serpentina; le sposti trascinandole.' : 'Le squadre vengono distribuite nei gironi per testa di serie; puoi spostarle trascinandole.', 'Produce le classifiche per girone, tra gironi e generale.', 'Dopo puoi aggiungere altre fasi.'], 'Il torneo continua →')}
-          ${opt('KNOCKOUT', 'Eliminazione diretta', '⊐', [needSrc ? 'Le posizioni entrano nel tabellone dal turno che scegli; squadre e BYE si spostano trascinandoli.' : 'Tabellone dalle teste di serie; squadre e BYE si spostano trascinandoli.', 'Produce i piazzamenti finali (finale, 3°/4° e altri se li attivi).', 'Puoi affiancare altri tabelloni (Oro, Argento…) o unirli in una fase successiva.'], 'Decide i piazzamenti del ramo')}
+          ${opt('GROUPS', 'Fase a gironi', '▦', [needSrc ? 'Le posizioni entrano nei gironi a serpentina; le sposti trascinandole.' : 'Le squadre vengono distribuite nei gironi in automatico; poi le sposti trascinandole.', 'Produce le classifiche per girone, tra gironi e generale.', 'Dopo puoi aggiungere altre fasi.'], 'Il torneo continua →')}
+          ${opt('KNOCKOUT', 'Eliminazione diretta', '⊐', [needSrc ? 'Le posizioni entrano nel tabellone dal turno che scegli; squadre e BYE si spostano trascinandoli.' : 'Tabellone riempito in automatico; squadre e BYE si spostano trascinandoli.', 'Produce i piazzamenti finali (finale, 3°/4° e altri se li attivi).', 'Puoi affiancare altri tabelloni (Oro, Argento…) o unirli in una fase successiva.'], 'Decide i piazzamenti del ramo')}
         </div>
       </div>
       <footer className="win-foot">
@@ -746,10 +744,10 @@
     return html`<div className="win-body">
       <aside className="win-aside">
         <${GamesOptions} ...${ctx} />
-        <p className="info">I gironi vengono riempiti per testa di serie, a serpentina. Trascina una squadra su un’altra per <b>scambiarle</b>, o nello spazio “Trascina qui” di un girone per spostarla: così cambi anche quante squadre ha ogni girone.</p>
+        <p className="info">I gironi vengono riempiti in automatico, a serpentina. Trascina una squadra su un’altra per <b>scambiarle</b>, o nello spazio “Trascina qui” di un girone per spostarla: così cambi anche quante squadre ha ogni girone.</p>
       </aside>
       <div className="win-main">
-        <div className="row" style=${{ justifyContent: 'space-between' }}><span className="row" style=${{ gap: 12 }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><span className="muted small">${phase.pools.length} gironi · ${games} partite, ${gamesPerTeam(phase)} a squadra</span></span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci per testa di serie</button></div>
+        <div className="row" style=${{ justifyContent: 'space-between' }}><span className="row" style=${{ gap: 12 }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><span className="muted small">${phase.pools.length} gironi · ${games} partite, ${gamesPerTeam(phase)} a squadra</span></span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci in automatico</button></div>
         <div className="pools">${phase.pools.map((pl) => html`<div key=${pl.number} className=${'pool' + (over === 'p' + pl.number ? ' over' : '')} onDragOver=${(e) => { e.preventDefault(); setOver('p' + pl.number); }} onDrop=${(e) => { e.preventDefault(); move(drag || e.dataTransfer.getData('text/plain'), pl.number); end(); }}>
           <div className="pool-h">${poolName(cat, phase, pl)}<span className="pool-size">${pl.ids.length} squadre${phase.pools.length > 1 ? html`<button className="pool-x" aria-label=${'Togli ' + poolName(cat, phase, pl)} title="Togli il girone: le sue squadre vanno negli altri" onClick=${() => removePool(pl.number)}>×</button>` : null}</span></div>
           <ul>${pl.ids.map((eid) => { const e = phase.entrants.find((x) => x.id === eid); return html`<li key=${eid} draggable="true" className=${'drag' + (drag === eid ? ' dragging' : '') + (over === eid ? ' over' : '')}
@@ -1029,7 +1027,7 @@
             <details className="more"><summary>Altri piazzamenti</summary><div className="more-pop">${[[5, 8], [7, 8]].map(([pl, min]) => html`<label key=${pl} className="check"><input type="checkbox" disabled=${n < min || (pl === 7 && !cfg.placements.includes(5))} checked=${cfg.placements.includes(pl)} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(pl) : (s.delete(pl), pl === 5 && s.delete(7)); upd({ placements: [...s].sort((x, y) => x - y) }); }} /> Finale ${pl}°/${pl + 1}°</label>`)}<span className="hint">I posti non giocati si decidono con i criteri di spareggio tra chi esce nello stesso turno.</span></div></details>
           </div>` : null}
         </div>
-        ${cfg.eliminations === 2 ? html`<${Note}>Doppia eliminazione: le teste di serie seguono l’ordine delle posizioni a sinistra. Tabellone vincenti, perdenti e finalissima sono generati dal motore.<//><${BracketView} st=${st} cat=${cat} phase=${phase} />`
+        ${cfg.eliminations === 2 ? html`<${Note}>Doppia eliminazione: l’ordine del tabellone segue l’elenco delle posizioni a sinistra. Tabellone vincenti, perdenti e finalissima sono generati dal motore.<//><${BracketView} st=${st} cat=${cat} phase=${phase} />`
         : !phase.built ? html`<${Note} tone="warn">Servono almeno due squadre nel tabellone: aggiungile dall’elenco a sinistra.<//>`
         : html`<div className="ko">
           <div className="ko-col"><div className="colh">${ROUND[lay.size] ? ROUND[lay.size][0] : 'Primo turno'}</div><div className="lane">
@@ -1221,7 +1219,7 @@
     } else {
       body = html`<${KoBoard} st=${st} cat=${cat} phase=${phase} onGame=${(g) => openResult(ctx, g)} />
         <div className="sub-t" style=${{ marginTop: 16 }}>Piazzamenti finali</div><${StandingsTable} rows=${TE.ranking(st, cat, phase, 'final')} cols=${cols} cat=${cat} nameOf=${nameOf} marked=${used.final} />
-        <p className="hint">Prima i posti decisi in campo; le squadre eliminate nello stesso turno sono ordinate con i criteri di spareggio, poi per testa di serie. “–” = ancora in gioco.</p>`;
+        <p className="hint">Prima i posti decisi in campo; le squadre eliminate nello stesso turno sono ordinate con i criteri di spareggio, poi per ordine di ingresso nel tabellone. “–” = ancora in gioco.</p>`;
     }
     return html`<${Card} ...${props}><div className="stack">${body}</div><${ConfirmPanel} ...${ctx} /><//>`;
   }
