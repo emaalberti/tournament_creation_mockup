@@ -143,7 +143,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
 .sq { display: inline-block; width: 10px; height: 10px; flex: none; }
 .sq.lg { width: 14px; height: 14px; }
 .ghost-wrap { position: absolute; display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-.chip.ghost { position: static; width: auto; min-width: 160px; border: 1.5px dashed var(--line); border-left: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); align-items: center; font-weight: 800; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 16px; }
+.chip.ghost { position: static; width: auto; min-width: 150px; border: 1.5px dashed var(--line); border-left: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); align-items: center; font-weight: 800; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 16px; }
 .chip.ghost:hover:not(:disabled), .chip.ghost.on { border-color: var(--blue); background: var(--blue-soft); box-shadow: none; }
 .chip.ghost:disabled { color: var(--muted); }
 .ghost-note { font-size: 12px; color: var(--ink-2); font-weight: 600; }
@@ -406,6 +406,15 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 /* riepilogo sotto la mappa: la mappa usa tutta la larghezza */
 .map-wrap { flex-direction: column; }
 .map-riep { width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; border-left: 0; border-top: 1px solid var(--line-soft); margin: 8px 0 0; padding: 12px 10px; align-self: stretch; }
+
+.pool-x { border: 0; background: none; color: inherit; opacity: .7; font-size: 15px; line-height: 1; padding: 0 2px; margin-left: 4px; }
+.pool-x:hover { opacity: 1; color: var(--bad); }
+.pool-add { border: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; min-height: 120px; }
+.pool-add:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-soft); }
+.finals { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.final-card { border: 1px solid var(--line-soft); border-top: 3px solid var(--green); background: var(--card); padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.final-card b { font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.final-card:hover { border-color: var(--green); }
 </style>
 </head>
 <body>
@@ -2046,16 +2055,16 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
   const siblingsOf = (cat, phase) => { if (TE.isRoot(cat, phase)) return [phase]; const key = (p) => TE.sourcesOf(cat, p).map((s) => s.id).sort().join(','); return TE.sortedPhases(cat).filter((p) => !TE.isRoot(cat, p) && key(p) === key(phase)); };
   function branchColor(cat, phase) { if (phase.type !== 'KNOCKOUT') return null; const s = siblingsOf(cat, phase).filter((p) => p.type === 'KNOCKOUT'); return s.length > 1 ? BRANCH_COLOR[Math.min(s.indexOf(phase), 3)] : null; }
   // posti finali decisi dalle fasi che chiudono un ramo
-  // posti finali: le posizioni che non proseguono in nessuna fase. Prima le fasi più avanti nella mappa, a pari livello in ordine di fase
+  // classifiche finali: ogni fase che non ha una fase dopo produce la propria classifica (1°…n°).
+  // Le altre fasi proseguono; le loro posizioni non usate da nessuna fase sono squadre escluse.
   function placeRanges(cat) {
-    const out = {}; let start = 1;
-    const { pos } = layout(cat);
     const used = {}; cat.phases.forEach((p) => p.entrants.forEach((e) => { if (e.source.fromPhase) used[e.source.fromPhase] = (used[e.source.fromPhase] || 0) + 1; }));
-    TE.sortedPhases(cat).filter((p) => p.built).sort((a, b) => pos[b.id].d - pos[a.id].d || a.order - b.order).forEach((p) => {
-      const k = p.entrants.length - (used[p.id] || 0);
-      if (k > 0) { out[p.id] = [start, start + k - 1]; start += k; }
+    const ranges = {}, excluded = {}, finals = [];
+    TE.sortedPhases(cat).filter((p) => p.built).forEach((p) => {
+      if (!TE.downstreamOf(cat, p).length) { ranges[p.id] = [1, p.entrants.length]; finals.push(p); }
+      else { const k = p.entrants.length - (used[p.id] || 0); if (k > 0) excluded[p.id] = k; }
     });
-    return { ranges: out, last: start - 1 };
+    return { ranges, excluded, finals, excludedN: Object.values(excluded).reduce((s, x) => s + x, 0) };
   }
   // ordine "di merito" di una posizione: prime di tutti i gironi, poi seconde… (tra gironi: tutte le 1ª, poi le 2ª…)
   const rankOrder = (k) => (k.ranking.startsWith('pool:') ? [k.position, +k.ranking.slice(5)] : k.ranking.startsWith('cross:') ? [+k.ranking.slice(6), k.position] : [k.position, 0]);
@@ -2114,7 +2123,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     if (p.type === 'GROUPS') { const k = p.pools.length || p.config.pools; return `${k} ${k === 1 ? 'girone' : 'gironi'} · ${n} squadre`; }
     const size = nextPow2(Math.max(2, n)); const byes = size - n;
     const r = ranges[p.id];
-    return `${p.config.eliminations === 2 ? 'Doppia elim.' : ROUND[size] ? ROUND[size][0] : ''} · ${n} sq.${byes && p.config.eliminations !== 2 ? ` · ${byes} BYE` : ''}${r ? ` · posti ${r[0]}°–${r[1]}°` : ''}`;
+    return `${p.config.eliminations === 2 ? 'Doppia elim.' : ROUND[size] ? ROUND[size][0] : ''} · ${n} sq.${byes && p.config.eliminations !== 2 ? ` · ${byes} BYE` : ''}`;
   }
   // il "chi passa" vive nella fase successiva: questa hook prova un nuovo elenco ordinato di posizioni e lo salva se il motore lo accetta
   function useKeys(ctx, phase) {
@@ -2154,7 +2163,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     </div>`;
   }
 
-  const W = 236, H = 88, GX = 112, GY = 26, GH = 52;
+  const W = 216, H = 88, GX = 92, GY = 26, GH = 52;
   function layout(cat) {
     const phases = TE.sortedPhases(cat), depth = {}, cols = {}, pos = {};
     phases.forEach((p) => { const s = TE.sourcesOf(cat, p); depth[p.id] = s.length ? 1 + Math.max(...s.map((x) => depth[x.id] || 0)) : 0; });
@@ -2167,8 +2176,8 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 
   function TournamentMap({ st, cat, phases, cols, pos, graph, selected, adding, riep, onAdd, open }) {
     const scRef = React.useRef(null);
-    useEffect(() => { const el = scRef.current; if (!el || !selected || !pos[selected.id]) return; const x = pos[selected.id].x; const right = x + W + GX + 200; if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth; else if (x < el.scrollLeft) el.scrollLeft = Math.max(0, x - 40); }, [selected && selected.id]);
-    const { ranges, last } = placeRanges(cat);
+    useEffect(() => { const el = scRef.current; if (!el || !selected || !pos[selected.id]) return; const x = pos[selected.id].x; const right = x + W + GX + 170; if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth; else if (x < el.scrollLeft) el.scrollLeft = Math.max(0, x - 40); }, [selected && selected.id]);
+    const { ranges, finals, excludedN } = placeRanges(cat);
     const teams = cat.teams.filter((t) => !t.fromAmericano).length;
     const ghosts = [];
     if (!phases.length) ghosts.push({ mode: 'first', x: 0, y: 0, label: 'Prima fase', note: `${teams} squadre iscritte` });
@@ -2229,8 +2238,8 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
         </div>
         <button className=${'map-riep' + (riep ? ' on' : '')} onClick=${() => phases.length && open('riepilogo')} disabled=${!phases.length}>
           <span className="eb" style=${{ color: 'inherit' }}>Riepilogo</span>
-          ${errN ? html`<b className="warn-t">${errN} ${errN === 1 ? 'problema' : 'problemi'} da correggere</b>` : phases.length ? html`<span><b>${teams} squadre</b> · posti decisi ${last ? `1°–${last}°` : '—'}</span>` : html`<b className="warn-t">Aggiungi la prima fase</b>`}
-          <span className="small muted">${last && last < teams ? `${teams - last} ${teams - last === 1 ? 'squadra esce' : 'squadre escono'} senza piazzamento finale.` : 'Ogni ramo finisce con la fase che decide i suoi piazzamenti.'}</span>
+          ${errN ? html`<b className="warn-t">${errN} ${errN === 1 ? 'problema' : 'problemi'} da correggere</b>` : phases.length ? html`<span><b>${teams} squadre</b> · ${finals.length === 1 ? '1 classifica finale' : `${finals.length} classifiche finali`}: ${finals.map((p) => `${p.name} (1°–${p.entrants.length}°)`).join(', ')}</span>` : html`<b className="warn-t">Aggiungi la prima fase</b>`}
+          <span className="small muted">${excludedN ? `${excludedN} ${excludedN === 1 ? 'squadra esce' : 'squadre escono'} prima, senza entrare in una classifica finale.` : 'Ogni fase senza una fase dopo genera una classifica finale.'}</span>
         </button>
       </div>
     </section>`;
@@ -2317,17 +2326,19 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
   }
 
   function RiepilogoPanel({ st, cat, graph, open, setView, act, say }) {
-    const { ranges, last } = placeRanges(cat);
+    const { ranges, excluded, finals, excludedN } = placeRanges(cat);
     const teams = cat.teams.filter((t) => !t.fromAmericano).length;
     const pub = st.tournament.status === 'PUBLISHED';
     return html`<section className="win cut"><div className="add-body">
       <div className="eb">Riepilogo · ${cat.name}</div>
-      <h2 className="add-h">${teams} squadre · posti decisi ${last ? `1°–${last}°` : '—'}</h2>
+      <h2 className="add-h">${teams} squadre · ${finals.length === 1 ? '1 classifica finale' : `${finals.length} classifiche finali`}</h2>
+      <p className="hint" style=${{ margin: 0 }}>Ogni fase che non ha una fase dopo genera una classifica finale. Con più tabelloni finali in parallelo ci sono più classifiche.</p>
       ${graph.errors.length ? html`<${Note} tone="bad"><b>Da correggere prima di attivare</b><ul>${graph.errors.map((e, i) => html`<li key=${i}>${T(e.msg)}</li>`)}</ul><//>` : html`<${Note} tone="good">La struttura è valida.<//>`}
-      ${graph.warnings.length ? html`<${Note} tone="warn"><ul>${graph.warnings.map((e, i) => html`<li key=${i}>${T(e.msg)}</li>`)}</ul><//>` : null}
-      <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Fase</th><th>Tipo</th><th>Prende da</th><th className="n">Squadre</th><th className="n">Partite</th><th>Posti finali</th></tr></thead><tbody>
-        ${TE.sortedPhases(cat).map((p) => { const r = ranges[p.id]; const col = branchColor(cat, p); return html`<tr key=${p.id} className="clickrow" onClick=${() => open(p.id)}><td><b>#${p.order} ${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b></td><td>${typeLabel(p.type)}</td><td>${TE.sourcesOf(cat, p).map((s) => `#${s.order} ${s.name}`).join(', ') || 'Squadre iscritte'}</td><td className="n">${p.entrants.length}</td><td className="n">${TE.phaseGames(cat, p.id).length}</td><td>${r ? `${r[0]}°–${r[1]}°` : html`<span className="muted">prosegue</span>`}</td></tr>`; })}
+      <div className="finals">${finals.map((p) => { const col = branchColor(cat, p); return html`<button key=${p.id} className="final-card" onClick=${() => open(p.id)}><span className="eb">Classifica finale</span><b>${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b><span>${p.entrants.length} squadre · posti 1°–${p.entrants.length}° · #${p.order} ${typeLabel(p.type)}</span></button>`; })}</div>
+      <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Fase</th><th>Tipo</th><th>Prende da</th><th className="n">Squadre</th><th className="n">Partite</th><th>Esito</th></tr></thead><tbody>
+        ${TE.sortedPhases(cat).map((p) => { const r = ranges[p.id]; const col = branchColor(cat, p); const nx = TE.downstreamOf(cat, p); return html`<tr key=${p.id} className="clickrow" onClick=${() => open(p.id)}><td><b>#${p.order} ${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b></td><td>${typeLabel(p.type)}</td><td>${TE.sourcesOf(cat, p).map((s) => `#${s.order} ${s.name}`).join(', ') || 'Squadre iscritte'}</td><td className="n">${p.entrants.length}</td><td className="n">${TE.phaseGames(cat, p.id).length}</td><td>${r ? html`<b className="ok-t">Classifica finale 1°–${r[1]}°</b>` : html`<span>Prosegue in ${nx.map((q) => `#${q.order} ${q.name}`).join(', ')}</span>${excluded[p.id] ? html` <span className="warn-t">· ${excluded[p.id]} escluse</span>` : null}`}</td></tr>`; })}
       </tbody></table></div>
+      ${excludedN ? html`<p className="hint" style=${{ margin: 0 }}>Le squadre escluse sono le posizioni che nessuna fase successiva usa: escono dal torneo senza entrare in una classifica finale.</p>` : null}
       <div className="row"><${Btn} onClick=${() => setView('programma')}>Vai al programma<//>${pub ? null : html`<${Btn} kind="primary bev" disabled=${graph.errors.length > 0} onClick=${() => { act((d) => { d.tournament.status = 'PUBLISHED'; }); say('Torneo attivo: ora puoi inserire i risultati.', 'good'); }}>Attiva torneo →<//>`}</div>
     </div></section>`;
   }
@@ -2356,13 +2367,16 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 
   function WinFoot({ st, cat, phase, errors, open, onAdd, setView, msg, tone }) {
     const prev = TE.sortedPhases(cat).filter((p) => p.order < phase.order).pop();
-    const next = TE.downstreamOf(cat, phase).sort((a, b) => a.order - b.order)[0];
-    const primary = next ? [`Avanti: #${next.order} ${next.name} →`, () => open(next.id)] : phase.type === 'KNOCKOUT' ? ['Avanti: riepilogo →', () => open('riepilogo')] : [`Avanti: aggiungi fase ${cat.phases.length + 1} →`, () => onAdd('next', phase.id)];
+    const next = TE.downstreamOf(cat, phase).sort((a, b) => a.order - b.order);
+    const bad = errors.length > 0;
     return html`<footer className="win-foot">
       <button className="btn" onClick=${() => (prev ? open(prev.id) : setView('partecipanti'))}>← ${prev ? `Fase ${prev.order} · ${prev.name}` : 'Squadre'}</button>
       <span className="spacer"></span>
       ${msg ? html`<span className=${'foot-msg ' + (tone || '')}>${msg}</span>` : null}
-      <button className="btn primary bev" disabled=${errors.length > 0} onClick=${primary[1]}>${primary[0]}</button>
+      ${next.length ? html`<span className="foot-msg">Le squadre proseguono in ${next.map((p) => `#${p.order} ${p.name}`).join(', ')}</span>
+          <button className="btn primary bev" disabled=${bad} onClick=${() => open(next[0].id)}>Vai a #${next[0].order} ${next[0].name} →</button>`
+        : html`<button className="btn" disabled=${bad || !phase.built} onClick=${() => onAdd('next', phase.id)}>+ Aggiungi una fase dopo</button>
+          <button className="btn primary bev" disabled=${bad} title="Nessuna fase dopo questa: i suoi piazzamenti sono una classifica finale" onClick=${() => open('riepilogo')}>✓ Fine del ramo · riepilogo →</button>`}
     </footer>`;
   }
   const Stepper = ({ id, label, value, min, max, onChange, readOnly, hint }) => html`<div className="field"><span className="field-label" id=${id + '-l'}>${label}</span>
@@ -2392,14 +2406,12 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const swap = (a, b) => { if (!a || a === b) return; const pa = poolOf(a), pb = poolOf(b); if (!pa || !pb || pa.number === pb.number) return; guard('Scambiare due squadre', () => act((d, c) => { TE.movePoolEntrant(d, c, phase.id, a, pb.number); TE.movePoolEntrant(d, c, phase.id, b, pa.number); })); };
     const move = (a, to) => { const pa = poolOf(a); if (!pa || pa.number === to) return; guard('Spostare una squadra', () => act((d, c) => TE.movePoolEntrant(d, c, phase.id, a, to))); };
     const end = () => { setDrag(null); setOver(null); };
-    const sizes = phase.pools.map((p) => p.ids.length);
-    const unbalanced = Math.max(...sizes) - Math.min(...sizes) > 1;
+    // aggiungi / togli un girone: le squadre del girone tolto vanno nei gironi più piccoli
+    const addPool = () => guard('Aggiungere un girone', () => act((d, c) => { const p = TE.findPhase(c, phase.id); const mp = TE.clone(p.pools); mp.push({ number: mp.length + 1, name: `Group ${LETTER(mp.length + 1)}`, ids: [] }); Object.assign(p.config, { distribution: 'MANUAL', pools: mp.length, manualPools: mp }); TE.rebuildPhase(d, c, p); }));
+    const removePool = (num) => guard('Togliere un girone', () => act((d, c) => { const p = TE.findPhase(c, phase.id); const gone = p.pools.find((q) => q.number === num); const mp = TE.clone(p.pools.filter((q) => q.number !== num)); gone.ids.forEach((id) => { mp.reduce((m, q) => (q.ids.length < m.ids.length ? q : m), mp[0]).ids.push(id); }); mp.forEach((q, i) => { q.number = i + 1; q.name = `Group ${LETTER(i + 1)}`; }); Object.assign(p.config, { distribution: 'MANUAL', pools: mp.length, manualPools: mp, crossovers: [] }); TE.rebuildPhase(d, c, p); }));
+    const canAdd = phase.pools.length + 1 <= maxPools;
     return html`<div className="win-body">
       <aside className="win-aside">
-        <div className="row" style=${{ gap: 16, alignItems: 'flex-start' }}>
-          <${Stepper} id=${'np-' + phase.id} label="N° gironi" value=${cfg.pools} min=${1} max=${maxPools} onChange=${(v) => guard('Cambiare i gironi', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { pools: v, manualPools: null, distribution: cfg.distribution === 'MANUAL' ? 'SNAKE' : cfg.distribution } })))} />
-          <${Stepper} id=${'sp-' + phase.id} label="Squadre per girone" value=${sizes.join(' · ')} readOnly=${true} hint="Cambiale trascinando le squadre" />
-        </div>
         <div className="count-box"><span className="eb" style=${{ color: 'var(--green-ink)' }}>Squadre nei gironi</span><b>${inPools}<small> / ${n}</small></b><span className="small">Ogni girone gioca ${gamesPerTeam(phase)} partite a squadra · totale ${games}</span></div>
         <${GamesOptions} ...${ctx} />
         <p className="info">I gironi vengono riempiti per testa di serie, a serpentina. Trascina una squadra su un’altra per <b>scambiarle</b>, o nello spazio “Trascina qui” di un girone per spostarla: così cambi anche quante squadre ha ogni girone.</p>
@@ -2407,16 +2419,14 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       <div className="win-main">
         <div className="row" style=${{ justifyContent: 'space-between' }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci per testa di serie</button></div>
         <div className="pools">${phase.pools.map((pl) => html`<div key=${pl.number} className=${'pool' + (over === 'p' + pl.number ? ' over' : '')} onDragOver=${(e) => { e.preventDefault(); setOver('p' + pl.number); }} onDrop=${(e) => { e.preventDefault(); move(drag || e.dataTransfer.getData('text/plain'), pl.number); end(); }}>
-          <div className="pool-h">${poolName(cat, phase, pl)}<span>${pl.ids.length} squadre</span></div>
+          <div className="pool-h">${poolName(cat, phase, pl)}<span className="pool-size">${pl.ids.length} squadre${phase.pools.length > 1 ? html`<button className="pool-x" aria-label=${'Togli ' + poolName(cat, phase, pl)} title="Togli il girone: le sue squadre vanno negli altri" onClick=${() => removePool(pl.number)}>×</button>` : null}</span></div>
           <ul>${pl.ids.map((eid) => { const e = phase.entrants.find((x) => x.id === eid); return html`<li key=${eid} draggable="true" className=${'drag' + (drag === eid ? ' dragging' : '') + (over === eid ? ' over' : '')}
               onDragStart=${(ev) => { ev.dataTransfer.setData('text/plain', eid); ev.dataTransfer.effectAllowed = 'move'; setDrag(eid); }} onDragEnd=${end}
               onDragOver=${(ev) => { ev.preventDefault(); ev.stopPropagation(); setOver(eid); }} onDrop=${(ev) => { ev.preventDefault(); ev.stopPropagation(); swap(drag || ev.dataTransfer.getData('text/plain'), eid); end(); }}>
             <span className="handle" aria-hidden="true">⠿</span><span className="nm">${entLabel(cat, phase, e)}</span>
             <select className="mini-sel" aria-label=${'Sposta ' + entLabel(cat, phase, e)} value=${pl.number} onChange=${(ev) => move(eid, +ev.target.value)}>${phase.pools.map((q) => html`<option key=${q.number} value=${q.number}>${poolCode(cat, phase, q)}</option>`)}</select></li>`; })}
-            <li className="drop-here" aria-hidden="true">Trascina qui per spostare una squadra in questo girone</li></ul></div>`)}</div>
-        <div className="sub-t" style=${{ marginTop: 6 }}>Regole del drag & drop</div>
-        <div className="rules3"><div><b>Su una squadra</b> · le due squadre si scambiano di girone.</div><div><b>Su uno spazio libero</b> · la squadra si sposta; il girone di partenza resta con un posto in meno.</div><div><b>Gironi sbilanciati</b> · consentiti${unbalanced ? html`: <span className="warn-t">ora le dimensioni differiscono di più di 1</span>` : ''}.</div></div>
-        <${Crossovers} ...${ctx} />
+            <li className="drop-here" aria-hidden="true">Trascina qui una squadra</li></ul></div>`)}
+          <button className="pool-add" disabled=${!canAdd} title=${canAdd ? 'Aggiungi un girone vuoto e trascinaci le squadre' : `Con ${n} squadre servono in media almeno 2 squadre per girone`} onClick=${addPool}>+ Aggiungi girone</button></div>
       </div>
       <${WinFoot} ...${ctx} msg=${`${n} posizioni finali disponibili per la fase successiva`} />
     </div>`;
@@ -2523,6 +2533,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const movePlace = (fp, fj, p, j) => { const k = keyAt[fp][fj]; if (k) place(k, p, j); };
     const removeAt = (p, j) => { const pk = clonePK(); pk[p].splice(j, 1); save(pk, sizes); };
     const setSize = (p, v) => { const pk = clonePK(); const sz = sizes.slice(); sz[p] = Math.max(1, v); if (pk[p].length > sz[p]) pk[p] = pk[p].slice(0, sz[p]); save(pk, sz); };
+    const removePool = (p) => { const pk = clonePK(); const sz = sizes.slice(); pk.splice(p, 1); sz.splice(p, 1); save(pk, sz, 'Girone tolto: le sue posizioni sono di nuovo libere.'); };
     const setAllSizes = (v) => { const pk = clonePK().map((l) => l.slice(0, Math.max(1, v))); save(pk, pk.map(() => Math.max(1, v))); };
     const setPools = (v) => { const pk = clonePK(); const sz = sizes.slice(); while (pk.length < v) { pk.push([]); sz.push(sz[sz.length - 1] || 2); } while (pk.length > v) { pk.pop(); sz.pop(); } save(pk, sz, null); };
     const fillEmpty = () => {
@@ -2556,10 +2567,6 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const empties = sizes.reduce((s, z, i) => s + Math.max(0, z - keyAt[i].length), 0);
     return html`<div className="win-body">
       <aside className="win-aside">
-        <div className="row" style=${{ gap: 16, alignItems: 'flex-start' }}>
-          <${Stepper} id=${'np-' + phase.id} label="N° gironi" value=${keyAt.length} min=${1} max=${16} onChange=${setPools} />
-          <${Stepper} id=${'sp-' + phase.id} label="Posti per girone" value=${Math.max(...sizes)} min=${1} max=${16} onChange=${setAllSizes} hint=${new Set(sizes).size > 1 ? `ora: ${sizes.join(' · ')}` : null} />
-        </div>
         <${PositionsList} cat=${cat} phase=${phase} keys=${keys} statusOf=${statusOf} onToggle=${toggle} kind=${kind} setKind=${switchKind} srcId=${srcId} setSrc=${setSrc} title=${(u, f) => `${u} usate · ${f} libere`} over=${over} setOver=${setOver} onDropBack=${(pl) => pl.from === 'gplace' && removeAt(pl.p, pl.j)} />
         <p className="info">Le posizioni libere si possono usare in una fase <b>in parallelo</b>. Se restano libere, quelle squadre escono dal torneo.</p>
         <label className="check"><input type="checkbox" checked=${phase.inheritPoints} onChange=${(e) => guard('Cambiare i punti ereditati', () => act((d, c) => TE.updatePhase(d, c, phase.id, { inheritPoints: e.target.checked })))} /> Porta punti e statistiche dalla fase precedente</label>
@@ -2569,16 +2576,15 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
         <div className="row" style=${{ justifyContent: 'space-between' }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span>${empties ? html`<button className="btn sm" onClick=${fillEmpty}>Riempi i ${empties} posti vuoti</button>` : null}</div>
         ${!auto && enginePools !== keyAt.length && phase.built ? html`<${Note} tone="warn">Con ${keys.length} squadre il motore può fare al massimo ${enginePools} ${enginePools === 1 ? 'girone' : 'gironi'} (almeno 2 squadre per girone in media): riempi i posti o togli un girone.<//>` : null}
         <div className="pools wide">${keyAt.map((list, p) => html`<div key=${p} className="pool">
-          <div className="pool-h light">${poolName(cat, phase, { number: p + 1 })}<span className="pool-size"><button className="stp xs" aria-label="Un posto in meno" disabled=${sizes[p] <= 1} onClick=${() => setSize(p, sizes[p] - 1)}>−</button>${sizes[p]} posti<button className="stp xs" aria-label="Un posto in più" onClick=${() => setSize(p, sizes[p] + 1)}>+</button></span></div>
+          <div className="pool-h light">${poolName(cat, phase, { number: p + 1 })}<span className="pool-size"><button className="stp xs" aria-label="Un posto in meno" disabled=${sizes[p] <= 1} onClick=${() => setSize(p, sizes[p] - 1)}>−</button>${sizes[p]} posti<button className="stp xs" aria-label="Un posto in più" onClick=${() => setSize(p, sizes[p] + 1)}>+</button>${keyAt.length > 1 ? html`<button className="pool-x" aria-label="Togli il girone" title="Togli il girone: le sue posizioni tornano libere" onClick=${() => removePool(p)}>×</button>` : null}</span></div>
           <div className="slots">${Array.from({ length: sizes[p] }, (_, j) => { const k = list[j]; const ent = k ? phase.entrants[keys.findIndex((x) => kid(x) === kid(k))] : null; const id = `${p}-${j}`;
             const lb = ent ? entLabel(cat, phase, ent) : null;
             return html`<div key=${id} className=${'slot-wrap' + (over === id ? ' over' : '')} ...${dropProps(id, over, setOver, dropOn(p, j))}>
               <div role="button" tabIndex="0" onKeyDown=${kb(() => setOpen(openPlace === id ? null : id))} className=${'slot-btn' + (k ? '' : ' empty') + (k && isCross(k) ? ' cross' : '') + (openPlace === id ? ' open' : '') + (dragging && dragging.from === 'gplace' && dragging.p === p && dragging.j === j ? ' dragging' : '')} onClick=${() => setOpen(openPlace === id ? null : id)} ...${k ? dragProps({ from: 'gplace', p, j }, setDragging) : {}}>
                 <span>${k ? html`<span className="handle" aria-hidden="true">⠿</span> ${ent && ent.participant ? html`<b>${lb}</b> <small>${posLabel(cat, k)}</small>` : lb}` : 'Scegli o trascina qui…'}</span><span className="chev">▾</span></div>
               ${openPlace === id ? html`<${SlotMenu} cat=${cat} phase=${phase} keys=${keys} curIdx=${k ? keys.findIndex((x) => kid(x) === kid(k)) : -1} whereIs=${(t) => { const at = locate(keys[t]); return at ? `scambia con ${poolCode(cat, phase, { number: at[0] + 1 })}` : ''; }} nextKeys=${nextFor(p, j)} check=${check} onPick=${(nk) => { setOpen(null); place(nk, p, j); }} onRemove=${k ? () => { setOpen(null); removeAt(p, j); } : null} removeLabel="Svuota questo posto" onClose=${() => setOpen(null)} />` : null}
-            </div>`; })}</div></div>`)}</div>
-        <p className="info">Trascina una posizione dall’elenco su un posto, o un posto su un altro per <b>scambiarli</b>. Con − e + decidi quanti posti ha ogni girone. Chi passa da questa fase si decide nella <b>fase successiva</b>.</p>
-        <${Crossovers} ...${ctx} />
+            </div>`; })}</div></div>`)}<button className="pool-add" onClick=${() => setPools(keyAt.length + 1)}>+ Aggiungi girone</button></div>
+        <p className="info">Trascina una posizione dall’elenco su un posto, o un posto su un altro per <b>scambiarli</b>. Con − e + decidi quanti posti ha ogni girone, con “Aggiungi girone” ne crei uno nuovo. Chi passa da questa fase si decide nella <b>fase successiva</b>.</p>
       </div>
       <${WinFoot} ...${ctx} msg=${empties ? `${empties} posti ancora vuoti` : phase.built ? `${keys.length} posizioni finali disponibili per la fase successiva` : 'Servono almeno due posizioni.'} tone=${empties || !phase.built ? 'warn' : ''} />
     </div>`;

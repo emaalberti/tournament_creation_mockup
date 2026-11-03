@@ -134,7 +134,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
 .sq { display: inline-block; width: 10px; height: 10px; flex: none; }
 .sq.lg { width: 14px; height: 14px; }
 .ghost-wrap { position: absolute; display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-.chip.ghost { position: static; width: auto; min-width: 160px; border: 1.5px dashed var(--line); border-left: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); align-items: center; font-weight: 800; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 16px; }
+.chip.ghost { position: static; width: auto; min-width: 150px; border: 1.5px dashed var(--line); border-left: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); align-items: center; font-weight: 800; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 16px; }
 .chip.ghost:hover:not(:disabled), .chip.ghost.on { border-color: var(--blue); background: var(--blue-soft); box-shadow: none; }
 .chip.ghost:disabled { color: var(--muted); }
 .ghost-note { font-size: 12px; color: var(--ink-2); font-weight: 600; }
@@ -397,3 +397,12 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 /* riepilogo sotto la mappa: la mappa usa tutta la larghezza */
 .map-wrap { flex-direction: column; }
 .map-riep { width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; border-left: 0; border-top: 1px solid var(--line-soft); margin: 8px 0 0; padding: 12px 10px; align-self: stretch; }
+
+.pool-x { border: 0; background: none; color: inherit; opacity: .7; font-size: 15px; line-height: 1; padding: 0 2px; margin-left: 4px; }
+.pool-x:hover { opacity: 1; color: var(--bad); }
+.pool-add { border: 1.5px dashed var(--line); background: transparent; color: var(--blue-ink); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; min-height: 120px; }
+.pool-add:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-soft); }
+.finals { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.final-card { border: 1px solid var(--line-soft); border-top: 3px solid var(--green); background: var(--card); padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.final-card b { font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.final-card:hover { border-color: var(--green); }
