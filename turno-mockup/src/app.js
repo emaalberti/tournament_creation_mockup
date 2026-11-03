@@ -183,6 +183,16 @@
         ${cat ? html`<${RulesView} ...${ctx} />` : null}
       </div></div>`;
   }
+  // nomi dei criteri in parole semplici (l'unità dipende dallo sport: game, gol, punti)
+  function ruleName(r, sportKey) {
+    const u = (TE.SPORTS[sportKey] || {}).unit ? TE.SPORTS[sportKey].unit[1] : 'punti';
+    return { POINTS: 'Punti in classifica', WINS: 'Partite vinte', MATCHUPS: 'Vittorie e pareggi', SCORE_DIFF: `Differenza ${u}`, SCORE_FOR: `${u[0].toUpperCase() + u.slice(1)} fatti`, SCORE_AGAINST_LEAST: `${u[0].toUpperCase() + u.slice(1)} subiti (meno è meglio)`, SCORE_RATIO: `Quoziente ${u}`, SET_DIFF: 'Differenza set', SET_RATIO: 'Quoziente set', SETS_FOR: 'Set vinti', SETS_AGAINST_LEAST: 'Set persi (meno è meglio)' }[r] || TE.RULES[r].name;
+  }
+  function tbName(t, list, sportKey) {
+    if (t.scope !== 'H') return ruleName(t.rule, sportKey);
+    const hs = list.filter((x) => x.scope === 'H');
+    return hs.indexOf(t) === 0 ? 'Scontro diretto' : `Scontro diretto · ${ruleName(t.rule, sportKey).toLowerCase()}`;
+  }
   function RulesView({ st, cat, sport, act }) {
     const [newRule, setNewRule] = useState('WINS');
     const [newScope, setNewScope] = useState('O');
@@ -202,19 +212,20 @@
           <div className="sub-t">Criteri di spareggio, in ordine</div>
           <ol className="tb-list">${f.tiebreakers.map((t, i) => html`<li key=${i}>
             <span className="rk">${i + 1}</span>
-            <span className="nm">${TE.RULES[t.rule].name}<small>${TE.RULES[t.rule].eq}</small></span>
-            <${Tag} tone=${t.scope === 'H' ? 'blue' : ''}>${t.scope === 'H' ? 'Scontri diretti' : 'Generale'}<//>
+            <span className="nm">${tbName(t, f.tiebreakers, st.tournament.sport)}</span>
             <span className="row tight">
               <button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => set((x) => { const a = x.tiebreakers; [a[i - 1], a[i]] = [a[i], a[i - 1]]; })}>↑</button>
               <button className="icon-btn" aria-label="Giù" disabled=${i === f.tiebreakers.length - 1} onClick=${() => set((x) => { const a = x.tiebreakers; [a[i + 1], a[i]] = [a[i], a[i + 1]]; })}>↓</button>
               <button className="icon-btn" aria-label="Rimuovi" onClick=${() => set((x) => { x.tiebreakers.splice(i, 1); })}>×</button>
             </span></li>`)}</ol>
           <div className="row">
-            <select id="tb-rule" aria-label="Criterio" value=${newRule} onChange=${(e) => setNewRule(e.target.value)}>${rules.map((r) => html`<option key=${r} value=${r}>${TE.RULES[r].name} (${TE.RULES[r].eq})</option>`)}</select>
-            <select id="tb-scope" aria-label="Ambito" value=${newScope} onChange=${(e) => setNewScope(e.target.value)}><option value="O">Generale</option><option value="H">Scontri diretti</option></select>
-            <${Btn} disabled=${f.tiebreakers.some((t) => t.rule === newRule && t.scope === newScope)} onClick=${() => set((x) => { x.tiebreakers.push({ rule: newRule, scope: newScope }); })}>Aggiungi criterio<//>
+            <select id="tb-rule" aria-label="Criterio" value=${newRule} onChange=${(e) => setNewRule(e.target.value)}>
+              ${rules.filter((r) => !f.tiebreakers.some((t) => t.rule === r && t.scope === 'O')).map((r) => html`<option key=${r} value=${r}>${ruleName(r, st.tournament.sport)}</option>`)}
+              ${f.tiebreakers.some((t) => t.scope === 'H') ? null : html`<option value="H2H">Scontro diretto</option>`}</select>
+            <${Btn} onClick=${() => set((x) => { const sel = document.getElementById('tb-rule').value; if (!sel) return; if (sel === 'H2H') { const d = (TE.DEFAULT_TIEBREAKERS[st.tournament.sport].find(([, sc]) => sc === 'H') || ['POINTS'])[0]; x.tiebreakers.push({ rule: d, scope: 'H' }); } else if (!x.tiebreakers.some((t) => t.rule === sel && t.scope === 'O')) x.tiebreakers.push({ rule: sel, scope: 'O' }); })}>Aggiungi criterio<//>
             <${Btn} kind="ghost" onClick=${() => set((x) => { x.tiebreakers = TE.DEFAULT_TIEBREAKERS[st.tournament.sport].map(([rule, scope]) => ({ rule, scope })); })}>Usa i criteri del ${sport.label}<//>
           </div>
+          <p className="hint">“Scontro diretto” confronta solo le partite giocate tra le squadre a pari merito. Tutti gli altri criteri valgono su tutte le partite della fase.</p>
           <p className="hint">Le classifiche che confrontano squadre di gironi diversi (generale, migliori k-esime) usano le medie per partita. Le parità rimaste dopo l’ultimo criterio le ordina l’organizzatore quando conferma la fase.</p>
         </div>
         <div>
@@ -979,7 +990,12 @@
     const toggle = (k, isMine) => {
       if (isMine) return removeSlot(slots.indexOf(keys.findIndex((x) => kid(x) === kid(k))));
       const si = slots.findIndex((x, i) => x == null && slots[i ^ 1] != null);
-      if (si < 0) return say('Il tabellone è pieno: scegli un turno più grande in “Parti da” o togli una squadra.', 'warn');
+      if (si < 0) {
+        // tabellone pieno: si passa al turno più grande, con le squadre in ordine di ingresso
+        const nk = [...keys, k]; const size = nextPow2(nk.length);
+        if (size > 64) return say('Il tabellone ha già il numero massimo di squadre.', 'warn');
+        return commit(nk, { layout: TE.seedOrder(size).map((x) => (x <= nk.length ? x - 1 : null)) }, `Tabellone allargato: ora parte ${ROUND[size] ? ROUND[size][2] : ''}.`);
+      }
       placeKey(k, si);
     };
     const statusOf = (k, isMine, owner) => {
@@ -1059,11 +1075,11 @@
       <${WinFoot} ...${ctx} msg=${sameGroup.length ? `${sameGroup.join(' e ')} ${sameGroup.length > 1 ? 'mettono' : 'mette'} di fronte due squadre dello stesso girone.` : phase.built ? `${TE.phaseGames(cat, phase.id).length} partite · ${lay.size - n} BYE` : 'Aggiungi almeno due squadre.'} tone=${sameGroup.length ? 'warn' : ''} />
     </div>`;
   }
-  function CrossCriteria({ cat, act }) {
-    const f = cat.format;
+  function CrossCriteria({ st, cat, act }) {
+    const f = cat.format; const sportKey = st.tournament.sport;
     const set = (fn) => act((d, c) => fn(c.format));
     return html`<div className="stack" style=${{ gap: 6 }}><div className="row" style=${{ justifyContent: 'space-between' }}><span className="field-label">Criteri classifica tra gironi</span><span className="hint">ordine</span></div>
-      <ol className="tb-list compact">${f.tiebreakers.filter((t) => t.scope === 'O').map((t, i, arr) => { const gi = f.tiebreakers.indexOf(t); return html`<li key=${gi}><span className="rk">${i + 1}</span><span className="nm">${TE.RULES[t.rule].name}</span><span className="row tight"><button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i - 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↑</button><button className="icon-btn" aria-label="Giù" disabled=${i === arr.length - 1} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i + 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↓</button></span></li>`; })}</ol>
+      <ol className="tb-list compact">${f.tiebreakers.filter((t) => t.scope === 'O').map((t, i, arr) => { const gi = f.tiebreakers.indexOf(t); return html`<li key=${gi}><span className="rk">${i + 1}</span><span className="nm">${ruleName(t.rule, sportKey)}</span><span className="row tight"><button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i - 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↑</button><button className="icon-btn" aria-label="Giù" disabled=${i === arr.length - 1} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i + 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↓</button></span></li>`; })}</ol>
       <span className="hint">Con gironi di dimensioni diverse si confronta la <b>media per partita</b>. Valgono per tutta la categoria.</span></div>`;
   }
   function KoCard({ st, cat, g, code, codes, onGame, tone, title }) {
