@@ -15,7 +15,17 @@
 >     const lay = base === 1 && tag === 'M' && validLayout(phase.config.layout, sources.length) ? phase.config.layout : null;
 >     const size = lay ? lay.length : nextPow2(Math.max(2, sources.length));
 >     let cur = lay ? lay.map((i) => (i == null ? BYE : sources[i])) : seedOrder(size).map((s) => sources[s - 1] || BYE), sz = size, depth = 0;
-1148c1158
+483c493,495
+<     const size = nextPow2(Math.max(2, sources.length));
+---
+>     // [estensione Turno] anche la doppia eliminazione accetta config.layout per il primo turno (vedi validLayout)
+>     const lay = validLayout(phase.config.layout, sources.length) ? phase.config.layout : null;
+>     const size = lay ? lay.length : nextPow2(Math.max(2, sources.length));
+495c507
+<     let upper = seedOrder(size).map((s) => sources[s - 1] || BYE);
+---
+>     let upper = lay ? lay.map((i) => (i == null ? BYE : sources[i])) : seedOrder(size).map((s) => sources[s - 1] || BYE);
+1148c1160
 <     allSpaces, gameLengthFor, generateFixedSchedule, buildQueue, fillCourts, findGame,
 ---
 >     allSpaces, gameLengthFor, generateFixedSchedule, buildQueue, fillCourts, findGame, validLayout,

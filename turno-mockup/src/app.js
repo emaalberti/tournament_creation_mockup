@@ -418,7 +418,10 @@
     const main = games.filter((g) => g.bracket === 'M');
     const depths = [...new Set(main.map((g) => g.depth))].sort((a, b) => a - b);
     const codes = {}; const cols = [];
-    const r0 = main.filter((g) => g.depth === 0); let gi = 0;
+    const de = phase.config.eliminations === 2;
+    const byLabel = (list) => { const out = []; list.forEach((g) => { let c = out.find((x) => x.label === g.label); if (!c) { c = { label: g.label, games: [] }; out.push(c); } c.games.push(g); }); return out; };
+    const upR = de ? byLabel(games.filter((g) => g.bracket === 'U')) : [];
+    const r0 = de ? (upR[0] ? upR[0].games : []) : main.filter((g) => g.depth === 0); let gi = 0;
     const pairs = [];
     for (let i = 0; i < size / 2; i++) {
       const a = slots[2 * i], b = slots[2 * i + 1];
@@ -437,10 +440,19 @@
     place.forEach((g) => { codes[g.number] = T(g.label).replace(' posto', ''); });
     const cons = games.filter((g) => g.bracket === 'C');
     cons.forEach((g, j) => { codes[g.number] = `C${j + 1}`; });
+    let deCols = null;
+    if (de) {
+      const upper = upR.map((c, r) => { const sz = size >> r; const fin = sz === 2; c.games.forEach((g, j) => { if (r > 0 || !codes[g.number]) codes[g.number] = fin ? 'FV' : `${ROUND[sz] ? ROUND[sz][1] : 'T'}${j + 1}`; }); return { title: fin ? 'Finale vincenti' : ROUND[sz] ? ROUND[sz][0] : `Turno ${r + 1}`, games: c.games }; });
+      const lowR = byLabel(games.filter((g) => g.bracket === 'L'));
+      const lower = lowR.map((c, k) => { const fin = c.label === 'Lower Final'; c.games.forEach((g, j) => { codes[g.number] = fin ? 'FP' : `P${k + 1}.${j + 1}`; }); return { title: fin ? 'Finale perdenti' : `Perdenti · turno ${k + 1}`, games: c.games }; });
+      const gf = games.filter((g) => g.bracket === 'GF');
+      gf.forEach((g, i) => { codes[g.number] = i ? 'Bella' : 'FF'; });
+      deCols = { upper, lower, gf };
+    }
     const slotCode = (si) => pairs[Math.floor(si / 2)].code;
     const slotHasBye = (si) => pairs[Math.floor(si / 2)].bye;
     const entrantCode = (idx) => { const si = slots.indexOf(idx); return si < 0 ? '?' : slotCode(si) + (slotHasBye(si) ? ' · BYE' : ''); };
-    return { n, size, slots, pairs, cols, codes, place, cons, slotCode, entrantCode };
+    return { n, size, slots, pairs, cols, codes, place, cons, slotCode, entrantCode, de: deCols };
   }
   function phaseStateLabel(st, cat, p, on, err) {
     if (on) return ['In modifica', ''];
@@ -1006,10 +1018,13 @@
           : html`<${SlotMenu} cat=${cat} phase=${phase} keys=${keys} curIdx=${t == null ? -1 : t} whereIs=${(x) => (t == null ? `sposta qui da ${lay.slotCode(slots.indexOf(x))}` : `scambia con ${lay.slotCode(slots.indexOf(x))}`)} nextKeys=${(k) => { const nk = keys.slice(); if (t != null) nk[t] = k; else nk.push(k); return nk; }} check=${check} onPick=${(k) => { setOpen(null); placeKey(k, si); }} onRemove=${e ? () => { setOpen(null); removeSlot(si); } : null} removeLabel="Lascia BYE (togli dal tabellone)" onClose=${() => setOpen(null)} />`) : null}
       </div>`;
     };
+    const firstColEl = html`<div className="ko-col"><div className="colh">${ROUND[lay.size] ? ROUND[lay.size][0] : 'Primo turno'}</div><div className="lane">
+      ${lay.pairs.map((p) => html`<div key=${p.code} className="m"><div className="ml"><span>${p.code}${p.g ? html` <small>#${p.g.number}</small>` : null}</span>${p.bye ? html`<span className="ok-t">Passa direttamente</span>` : sameGroup.includes(p.code) ? html`<span className="warn-t">Stesso girone</span>` : null}</div>${slotEl(p.slots[0])}${slotEl(p.slots[1])}</div>`)}
+    </div></div>`;
     const has3 = (cfg.placements || []).includes(3);
     return html`<div className="win-body">
       <aside className="win-aside">
-        ${cfg.eliminations !== 2 ? html`<div className="stack" style=${{ gap: 8 }}><span className="field-label">Parti da</span>
+        ${true ? html`<div className="stack" style=${{ gap: 8 }}><span className="field-label">Parti da</span>
           <div className="rounds">${ROUND_BTNS.map((sz) => { const cur = lay.size === sz; const after = Math.min(sz, avail); const ok = root ? sz >= n && n > sz / 2 : sz === 2 ? avail >= 2 : after > sz / 2; return html`<button key=${sz} className=${cur ? 'on' : ''} disabled=${!ok && !cur} onClick=${() => !cur && setRound(sz)}>${ROUND[sz][0]}</button>`; })}</div>
           <span className="hint">Proposti i turni che ${avail} ${root ? 'squadre' : 'posizioni'} possono riempire. I posti vuoti sono BYE: puoi spostarli dove vuoi.</span></div>` : null}
         ${root ? html`<div className="stack" style=${{ gap: 6 }}><span className="field-label">Squadre iscritte</span><div className="plist">${phase.entrants.map((e, i) => html`<div key=${e.id} className="prow mine"><span>${entLabel(cat, phase, e)}</span><span className="pst">${lay.entrantCode(i)}</span></div>`)}</div></div>`
@@ -1027,12 +1042,11 @@
             <details className="more"><summary>Altri piazzamenti</summary><div className="more-pop">${[[5, 8], [7, 8]].map(([pl, min]) => html`<label key=${pl} className="check"><input type="checkbox" disabled=${n < min || (pl === 7 && !cfg.placements.includes(5))} checked=${cfg.placements.includes(pl)} onChange=${(e) => { const s = new Set(cfg.placements); e.target.checked ? s.add(pl) : (s.delete(pl), pl === 5 && s.delete(7)); upd({ placements: [...s].sort((x, y) => x - y) }); }} /> Finale ${pl}°/${pl + 1}°</label>`)}<span className="hint">I posti non giocati si decidono con i criteri di spareggio tra chi esce nello stesso turno.</span></div></details>
           </div>` : null}
         </div>
-        ${cfg.eliminations === 2 ? html`<${Note}>Doppia eliminazione: l’ordine del tabellone segue l’elenco delle posizioni a sinistra. Tabellone vincenti, perdenti e finalissima sono generati dal motore.<//><${BracketView} st=${st} cat=${cat} phase=${phase} />`
-        : !phase.built ? html`<${Note} tone="warn">Servono almeno due squadre nel tabellone: aggiungile dall’elenco a sinistra.<//>`
+        ${!phase.built ? html`<${Note} tone="warn">Servono almeno due squadre nel tabellone: aggiungile dall’elenco a sinistra.<//>`
+        : cfg.eliminations === 2 ? html`<${DeBoard} st=${st} cat=${cat} lay=${lay} firstCol=${firstColEl} />
+          <p className="info">Doppia eliminazione: una squadra è fuori solo dopo due sconfitte. Il primo turno si modifica come sempre: trascina squadre e <b>BYE</b> per scambiarli.</p>`
         : html`<div className="ko">
-          <div className="ko-col"><div className="colh">${ROUND[lay.size] ? ROUND[lay.size][0] : 'Primo turno'}</div><div className="lane">
-            ${lay.pairs.map((p) => html`<div key=${p.code} className="m"><div className="ml"><span>${p.code}${p.g ? html` <small>#${p.g.number}</small>` : null}</span>${p.bye ? html`<span className="ok-t">Passa direttamente</span>` : sameGroup.includes(p.code) ? html`<span className="warn-t">Stesso girone</span>` : null}</div>${slotEl(p.slots[0])}${slotEl(p.slots[1])}</div>`)}
-          </div></div>
+          ${firstColEl}
           ${lay.cols.map((c) => html`<div key=${c.title} className="ko-col"><div className="colh">${c.final ? 'Finali' : c.title}</div><div className="lane">
             ${c.games.map((g) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} tone=${c.final ? 'gold' : ''} title=${c.final ? 'Finale · 1°/2°' : null} />`)}
             ${c.final ? lay.place.filter((g) => g.winnerPlace === 3).map((g) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} tone="blue" title="Finale · 3°/4°" />`) : null}
@@ -1079,12 +1093,25 @@
     </details>`;
   }
   // tabellone in sola lettura per Risultati e Classifiche (stesso disegno, partite cliccabili)
+  // doppia eliminazione: tabellone vincenti con la finalissima in fondo, sotto il tabellone perdenti
+  function DeBoard({ st, cat, lay, firstCol, onGame }) {
+    const col = (c) => html`<div key=${c.title} className="ko-col"><div className="colh">${c.title}</div><div className="lane">${c.games.map((g) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} onGame=${onGame} />`)}</div></div>`;
+    return html`<div className="de">
+      <section className="de-sec"><div className="de-h"><b>Tabellone vincenti</b><span>Chi perde qui non è eliminato: scende nel tabellone perdenti.</span></div>
+        <div className="ko">${firstCol}${lay.de.upper.slice(1).map(col)}</div></section>
+      <section className="de-sec lower"><div className="de-h"><b>Tabellone perdenti</b><span>Chi perde qui è eliminato. Chi vince la finale perdenti gioca la finalissima.</span></div>
+        <div className="ko">${lay.de.lower.length ? lay.de.lower.map(col) : html`<p className="hint">Si riempie con le perdenti del tabellone vincenti.</p>`}</div></section>
+      ${lay.de.gf.length ? html`<section className="de-sec final"><div className="de-h"><b>Finalissima</b><span>Vincente della finale vincenti contro vincente della finale perdenti. Decide 1° e 2° posto.</span></div>
+        <div className="de-final">${lay.de.gf.map((g, i) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} onGame=${onGame} tone=${i ? 'blue' : 'gold'} title=${i ? 'Bella · solo se vince chi arriva dai perdenti' : 'Finalissima · 1°/2°'} />`)}</div></section>` : null}
+    </div>`;
+  }
   function KoBoard({ st, cat, phase, onGame }) {
-    if (phase.config.eliminations === 2) return html`<${BracketView} st=${st} cat=${cat} phase=${phase} onGame=${onGame} />`;
     const lay = koLayout(cat, phase);
     const byeCard = (p) => { const t = lay.slots[p.slots[0]] != null ? lay.slots[p.slots[0]] : lay.slots[p.slots[1]]; const e = t == null ? null : phase.entrants[t]; return html`<div key=${p.code} className="m"><div className="ml"><span>${p.code}</span><span className="ok-t">Passa direttamente</span></div><div className="s"><span className="nm">${e ? entLabel(cat, phase, e) : ''}</span></div><div className="s bye">BYE</div></div>`; };
+    const firstCol = html`<div className="ko-col"><div className="colh">${ROUND[lay.size] ? ROUND[lay.size][0] : 'Primo turno'}</div><div className="lane">${lay.pairs.map((p) => (p.bye ? byeCard(p) : p.g ? html`<${KoCard} key=${p.code} st=${st} cat=${cat} g=${p.g} code=${p.code} codes=${lay.codes} onGame=${onGame} />` : null))}</div></div>`;
+    if (lay.de) return html`<${DeBoard} st=${st} cat=${cat} lay=${lay} firstCol=${firstCol} onGame=${onGame} />`;
     return html`<div className="ko">
-      <div className="ko-col"><div className="colh">${ROUND[lay.size] ? ROUND[lay.size][0] : 'Primo turno'}</div><div className="lane">${lay.pairs.map((p) => (p.bye ? byeCard(p) : html`<${KoCard} key=${p.code} st=${st} cat=${cat} g=${p.g} code=${p.code} codes=${lay.codes} onGame=${onGame} />`))}</div></div>
+      ${firstCol}
       ${lay.cols.map((c) => html`<div key=${c.title} className="ko-col"><div className="colh">${c.final ? 'Finali' : c.title}</div><div className="lane">
         ${c.games.map((g) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} onGame=${onGame} tone=${c.final ? 'gold' : ''} title=${c.final ? 'Finale · 1°/2°' : null} />`)}
         ${c.final ? lay.place.filter((g) => g.winnerPlace === 3).map((g) => html`<${KoCard} key=${g.id} st=${st} cat=${cat} g=${g} code=${lay.codes[g.number]} codes=${lay.codes} onGame=${onGame} tone="blue" title="Finale · 3°/4°" />`) : null}

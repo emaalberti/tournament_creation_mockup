@@ -19,7 +19,7 @@ Dopo una modifica in `src/`: `python3 build.py`.
 
 ## Estensione dell'engine: primo turno a mano (BYE scelti)
 
-Il mockup assegna sempre i BYE alle prime teste di serie. Per poterli scegliere, `buildSE` legge un campo opzionale `phase.config.layout`:
+Il mockup assegna sempre i BYE alle prime teste di serie. Per poterli scegliere, `buildSE` (eliminazione singola) e `buildDE` (doppia eliminazione) leggono un campo opzionale `phase.config.layout`:
 
 - array lungo una potenza di 2 (≥ numero di entranti, ≤ 128);
 - ogni cella è l'indice di un entrante (0-based, ognuno una sola volta) oppure `null` = BYE;

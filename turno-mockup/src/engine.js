@@ -490,7 +490,9 @@
     });
   }
   function buildDE(cat, phase, sources, reset) {
-    const size = nextPow2(Math.max(2, sources.length));
+    // [estensione Turno] anche la doppia eliminazione accetta config.layout per il primo turno (vedi validLayout)
+    const lay = validLayout(phase.config.layout, sources.length) ? phase.config.layout : null;
+    const size = lay ? lay.length : nextPow2(Math.max(2, sources.length));
     let alive = sources.length;
     let roundGames = [];
     const play = (a, b, label, tag) => {
@@ -502,7 +504,7 @@
       return { w: { t: 'dep', game: g.number, res: 'W' }, l: { t: 'dep', game: g.number, res: 'L' } };
     };
     const closeLowerRound = () => { const m = roundGames.length; roundGames.forEach((g) => { g.loserRange = [alive - m + 1, alive]; }); alive -= m; roundGames = []; };
-    let upper = seedOrder(size).map((s) => sources[s - 1] || BYE);
+    let upper = lay ? lay.map((i) => (i == null ? BYE : sources[i])) : seedOrder(size).map((s) => sources[s - 1] || BYE);
     const R = Math.log2(size), upperLosers = [];
     for (let r = 1; r <= R; r++) {
       const next = [], losers = [];
