@@ -389,3 +389,11 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 .slot-btn, .prow { cursor: pointer; }
 .prow.dis { cursor: default; }
 .slot-btn:focus-visible, .prow:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+.srcchip { padding: 7px 12px; border: 1px solid var(--line); background: var(--card); font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.srcchip.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-ink); }
+.pchip.idle { background: var(--card); border-color: var(--line-soft); color: var(--ink-2); }
+
+/* riepilogo sotto la mappa: la mappa usa tutta la larghezza */
+.map-wrap { flex-direction: column; }
+.map-riep { width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; border-left: 0; border-top: 1px solid var(--line-soft); margin: 8px 0 0; padding: 12px 10px; align-self: stretch; }

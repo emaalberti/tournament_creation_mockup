@@ -398,6 +398,14 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 .slot-btn, .prow { cursor: pointer; }
 .prow.dis { cursor: default; }
 .slot-btn:focus-visible, .prow:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+.srcchip { padding: 7px 12px; border: 1px solid var(--line); background: var(--card); font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.srcchip.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-ink); }
+.pchip.idle { background: var(--card); border-color: var(--line-soft); color: var(--ink-2); }
+
+/* riepilogo sotto la mappa: la mappa usa tutta la larghezza */
+.map-wrap { flex-direction: column; }
+.map-riep { width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; border-left: 0; border-top: 1px solid var(--line-soft); margin: 8px 0 0; padding: 12px 10px; align-self: stretch; }
 </style>
 </head>
 <body>
@@ -2038,11 +2046,24 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
   const siblingsOf = (cat, phase) => { if (TE.isRoot(cat, phase)) return [phase]; const key = (p) => TE.sourcesOf(cat, p).map((s) => s.id).sort().join(','); return TE.sortedPhases(cat).filter((p) => !TE.isRoot(cat, p) && key(p) === key(phase)); };
   function branchColor(cat, phase) { if (phase.type !== 'KNOCKOUT') return null; const s = siblingsOf(cat, phase).filter((p) => p.type === 'KNOCKOUT'); return s.length > 1 ? BRANCH_COLOR[Math.min(s.indexOf(phase), 3)] : null; }
   // posti finali decisi dalle fasi che chiudono un ramo
+  // posti finali: le posizioni che non proseguono in nessuna fase. Prima le fasi più avanti nella mappa, a pari livello in ordine di fase
   function placeRanges(cat) {
     const out = {}; let start = 1;
-    TE.sortedPhases(cat).filter((p) => p.built && !TE.downstreamOf(cat, p).length).forEach((p) => { out[p.id] = [start, start + p.entrants.length - 1]; start += p.entrants.length; });
+    const { pos } = layout(cat);
+    const used = {}; cat.phases.forEach((p) => p.entrants.forEach((e) => { if (e.source.fromPhase) used[e.source.fromPhase] = (used[e.source.fromPhase] || 0) + 1; }));
+    TE.sortedPhases(cat).filter((p) => p.built).sort((a, b) => pos[b.id].d - pos[a.id].d || a.order - b.order).forEach((p) => {
+      const k = p.entrants.length - (used[p.id] || 0);
+      if (k > 0) { out[p.id] = [start, start + k - 1]; start += k; }
+    });
     return { ranges: out, last: start - 1 };
   }
+  // ordine "di merito" di una posizione: prime di tutti i gironi, poi seconde… (tra gironi: tutte le 1ª, poi le 2ª…)
+  const rankOrder = (k) => (k.ranking.startsWith('pool:') ? [k.position, +k.ranking.slice(5)] : k.ranking.startsWith('cross:') ? [+k.ranking.slice(6), k.position] : [k.position, 0]);
+  const byRank = (a, b) => { const x = rankOrder(a), y = rankOrder(b); return x[0] - y[0] || x[1] - y[1]; };
+  // posizioni distribuite a serpentina nei gironi: 1ª riga A→C, 2ª riga C→A…
+  function snakeFill(keys, P) { const pk = Array.from({ length: P }, () => []); keys.forEach((k, i) => { const r = Math.floor(i / P), c = i % P; pk[r % 2 ? P - 1 - c : c].push(k); }); return pk; }
+  const snakePlaces = (sizes) => { const out = []; const R = Math.max(0, ...sizes); for (let r = 0; r < R; r++) { const row = []; sizes.forEach((z, p) => { if (r < z) row.push([p, r]); }); out.push(...(r % 2 ? row.reverse() : row)); } return out; };
+  function manualCfg(phaseId, pk, sizes) { let o = 0; return { distribution: 'MANUAL', pools: pk.length, manualPools: pk.map((list, pi) => ({ number: pi + 1, name: `Group ${LETTER(pi + 1)}`, ids: list.map(() => `e_${phaseId}_${++o}`) })), poolSizes: sizes || pk.map((l) => l.length) }; }
   // primo turno del tabellone: config.layout (estensione dell'engine) oppure ordine standard delle teste di serie
   function koSlots(phase) {
     const n = phase.entrants.length;
@@ -2146,7 +2167,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 
   function TournamentMap({ st, cat, phases, cols, pos, graph, selected, adding, riep, onAdd, open }) {
     const scRef = React.useRef(null);
-    useEffect(() => { const el = scRef.current; if (!el || !selected || !pos[selected.id]) return; const x = pos[selected.id].x; if (x + W + GX + 170 > el.scrollLeft + el.clientWidth || x < el.scrollLeft) el.scrollLeft = Math.max(0, x - 40); }, [selected && selected.id]);
+    useEffect(() => { const el = scRef.current; if (!el || !selected || !pos[selected.id]) return; const x = pos[selected.id].x; const right = x + W + GX + 200; if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth; else if (x < el.scrollLeft) el.scrollLeft = Math.max(0, x - 40); }, [selected && selected.id]);
     const { ranges, last } = placeRanges(cat);
     const teams = cat.teams.filter((t) => !t.fromAmericano).length;
     const ghosts = [];
@@ -2156,6 +2177,8 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       const nextCol = cols[p.d + 1] || [];
       const fn = freeOf(cat, selected, defaultKind(selected, cat)).length;
       ghosts.push({ mode: 'next', ref: selected.id, x: (p.d + 1) * (W + GX), y: nextCol.length * (H + GY) + (H - GH) / 2, from: p, label: 'Fase successiva', disabled: !selected.built || !fn, title: fn ? `${fn} posizioni libere di #${selected.order}` : 'Nessuna posizione libera' });
+      const koSibs = selected.type === 'KNOCKOUT' && !TE.isRoot(cat, selected) ? siblingsOf(cat, selected).filter((q) => q.type === 'KNOCKOUT' && q.built) : [];
+      if (koSibs.length > 1) ghosts.push({ mode: 'merge', ref: selected.id, x: (p.d + 1) * (W + GX), y: nextCol.length * (H + GY) + (H - GH) / 2 + GH + 18, from: p, label: `Unisci ${koSibs.map((q) => q.name).join(' + ')}`, title: 'Una fase che prende posizioni da più tabelloni, per esempio una finale tra le vincitrici' });
       if (!TE.isRoot(cat, selected)) {
         const src = TE.sourcesOf(cat, selected)[0];
         const sk = TE.connectorTo(cat, selected.id).selectors.find((s) => s.fromPhase === src.id);
@@ -2165,7 +2188,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       }
     }
     const maxD = Math.max(0, ...Object.keys(cols).map(Number));
-    const rows = Math.max(1, ...Object.values(cols).map((l) => l.length + 1));
+    const rows = Math.max(1, ...Object.values(cols).map((l) => l.length + 1), ...ghosts.map((g) => Math.ceil((g.y + GH) / (H + GY))));
     const width = (maxD + 1) * (W + GX) + 420;
     const height = Math.max(H, rows * (H + GY) - GY);
     const edges = [];
@@ -2190,7 +2213,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
               <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#059669" /></marker>
                 <marker id="arrb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#B91C1C" /></marker></defs>
               ${edges.map((e) => html`<path key=${e.key} d=${e.d} fill="none" stroke=${e.bad ? '#B91C1C' : '#059669'} strokeWidth="2" markerEnd=${e.bad ? 'url(#arrb)' : 'url(#arr)'} />`)}
-              ${ghosts.filter((g) => g.from).map((g) => { const x1 = g.from.x + W, y1 = g.from.y + H / 2, y2 = g.y + GH / 2, xm = x1 + 26; return html`<path key=${'g' + g.mode} d=${g.mode === 'next' && Math.abs(y1 - y2) < 2 ? `M${x1},${y1} H${g.x}` : `M${x1},${y1} H${xm} V${y2} H${g.x}`} fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5 4" />`; })}
+              ${ghosts.filter((g) => g.from).map((g) => { const x1 = g.from.x + W, y1 = g.from.y + H / 2, y2 = g.y + GH / 2, xm = x1 + 26; return html`<path key=${'g' + g.mode} d=${g.mode !== 'par' && Math.abs(y1 - y2) < 2 ? `M${x1},${y1} H${g.x}` : `M${x1},${y1} H${xm} V${y2} H${g.x}`} fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="5 4" />`; })}
             </svg>
             ${edges.map((e) => html`<div key=${'p' + e.key} className=${'conn-pill' + (e.bad ? ' bad' : '')} style=${{ left: e.px, top: e.py }}><b>${e.n} ${e.bad ? '!' : '✓'}</b><span>${e.label}</span></div>`)}
             ${phases.map((p) => { const on = !adding && selected && selected.id === p.id; const err = graph.errors.some((e) => e.phase === p.id); const [sl, tone] = phaseStateLabel(st, cat, p, on, err); const col = branchColor(cat, p);
@@ -2216,56 +2239,79 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
   // W2 · scegli il tipo della nuova fase
   function AddPhasePanel({ st, cat, act, say, adding, onCancel, open }) {
     const ref = adding.refId && TE.findPhase(cat, adding.refId);
-    const src = adding.mode === 'next' ? ref : adding.mode === 'par' ? TE.sourcesOf(cat, ref)[0] : null;
-    const parKind = adding.mode === 'par' ? (() => { const s = TE.connectorTo(cat, ref.id).selectors.find((x) => x.fromPhase === src.id); return s ? kindOfRanking(s.ranking, src) : defaultKind(src); })() : null;
-    const [type, setType] = useState(adding.mode === 'par' ? ref.type : src ? 'KNOCKOUT' : 'GROUPS');
-    const kind = parKind || (src ? defaultKind(src, cat) : null);
+    const parSrc = adding.mode === 'par' ? TE.sourcesOf(cat, ref)[0] : null;
+    const initial = adding.mode === 'next' ? [ref.id] : adding.mode === 'par' ? [parSrc.id] : adding.mode === 'merge' ? siblingsOf(cat, ref).filter((p) => p.type === 'KNOCKOUT' && p.built).map((p) => p.id) : [];
+    const [srcIds, setSrcIds] = useState(initial);
+    const [type, setType] = useState(adding.mode === 'par' ? ref.type : adding.mode === 'first' ? 'GROUPS' : 'KNOCKOUT');
+    const all = TE.sortedPhases(cat).filter((p) => p.built);
+    const srcs = all.filter((p) => srcIds.includes(p.id));
     const own = ownerMap(cat, null);
-    const items = src ? rankingItems(cat, src, kind).map((x) => ({ x, owner: own[`${src.id}|${x.ranking}|${x.pos}`] })) : [];
-    const free = items.filter((i) => !i.owner);
+    const parKind = parSrc ? (() => { const s = TE.connectorTo(cat, ref.id).selectors.find((x) => x.fromPhase === parSrc.id); return s ? kindOfRanking(s.ranking, parSrc) : null; })() : null;
+    const perSrc = srcs.map((src) => {
+      const kind = (parSrc && src.id === parSrc.id && parKind) || defaultKind(src, cat);
+      const items = rankingItems(cat, src, kind).map((x) => { const k = { fromPhase: src.id, ranking: x.ranking, position: x.pos }; return { k, owner: own[kid(k)] }; });
+      return { src, kind, items, free: items.filter((i) => !i.owner).map((i) => i.k).sort(byRank) };
+    });
+    const multi = perSrc.length > 1;
+    const freeN = perSrc.reduce((s, p) => s + p.free.length, 0);
     const newOrder = cat.phases.length + 1;
     const teams = cat.teams.filter((t) => !t.fromAmericano).length;
+    const needSrc = adding.mode !== 'first';
+    // posizioni di partenza: con una sola origine tutte le libere (tabellone: fino al turno pieno), con più origini le prime di ognuna
+    const startKeys = () => {
+      if (multi) return type === 'KNOCKOUT' ? perSrc.map((p) => p.free[0]).filter(Boolean) : perSrc.flatMap((p) => p.free);
+      let keys = perSrc.length ? perSrc[0].free.slice() : [];
+      if (type === 'KNOCKOUT') { let m = 1; while (m * 2 <= keys.length) m *= 2; keys = keys.slice(0, Math.max(2, m)); }
+      return keys;
+    };
+    const preview = startKeys();
     function create() {
+      const keys = startKeys();
       const id = act((d, c) => {
-        const s = src && TE.findPhase(c, src.id);
-        const sibKO = s ? c.phases.filter((p) => p.type === 'KNOCKOUT' && TE.sourcesOf(c, p).some((q) => q.id === s.id)).length : 0;
-        const name = type === 'KNOCKOUT' ? (sibKO ? BRANCH[sibKO] || `Tabellone ${sibKO + 1}` : 'Tabellone') : `Gironi ${newOrder}`;
-        if (type === 'KNOCKOUT' && sibKO === 1) c.phases.filter((p) => p.type === 'KNOCKOUT' && TE.sourcesOf(c, p).some((q) => q.id === s.id) && p.name === 'Tabellone').forEach((p) => { p.name = 'Oro'; });
-        const p = TE.addPhase(d, c, type, newOrder === 1 && type === 'GROUPS' ? 'Gironi' : name);
-        if (s) {
-          let keys = free.map((i) => ({ fromPhase: s.id, ranking: i.x.ranking, position: i.x.pos }));
-          if (type === 'KNOCKOUT') { keys.sort((a, b) => a.position - b.position); let m = 1; while (m * 2 <= keys.length) m *= 2; keys = keys.slice(0, Math.max(2, m)); }
-          if (type === 'GROUPS') { p.config.distribution = 'SEQUENTIAL'; p.config.pools = Math.max(1, Math.min(Math.floor(keys.length / 2), s.pools.length || 2)); }
-          writeKeys(d, c, p.id, keys);
+        const s = !multi && srcs[0] && TE.findPhase(c, srcs[0].id);
+        const sibKO = s ? c.phases.filter((p) => p.type === 'KNOCKOUT' && TE.sourcesOf(c, p).length === 1 && TE.sourcesOf(c, p)[0].id === s.id).length : 0;
+        let name = type === 'KNOCKOUT' ? (multi ? (keys.length === 2 ? 'Finale unica' : 'Tabellone unico') : sibKO ? BRANCH[sibKO] || `Tabellone ${sibKO + 1}` : 'Tabellone') : newOrder === 1 ? 'Gironi' : `Gironi ${newOrder}`;
+        if (type === 'KNOCKOUT' && sibKO === 1) c.phases.filter((p) => p.type === 'KNOCKOUT' && TE.sourcesOf(c, p).length === 1 && TE.sourcesOf(c, p)[0].id === s.id && p.name === 'Tabellone').forEach((p) => { p.name = 'Oro'; });
+        const p = TE.addPhase(d, c, type, name);
+        if (keys.length) {
+          if (type === 'GROUPS') { const P = Math.max(1, Math.min(Math.floor(keys.length / 2), (s && s.pools.length) || 2)); const pk = snakeFill(keys, P); Object.assign(p.config, manualCfg(p.id, pk)); writeKeys(d, c, p.id, pk.flat()); }
+          else writeKeys(d, c, p.id, keys);
         } else TE.rebuildPhase(d, c, p);
         return p.id;
       });
       open(id);
-      say(type === 'KNOCKOUT' ? 'Tabellone creato con le posizioni libere: cambiale dai menu degli slot.' : 'Fase a gironi creata: scegli le posizioni negli slot dei gironi.', 'good');
+      say(type === 'KNOCKOUT' ? (multi ? 'Fase creata con le prime di ogni tabellone: aggiungi altre posizioni dall’elenco se servono.' : 'Tabellone creato con le posizioni libere: trascina squadre e BYE per cambiare gli accoppiamenti.') : 'Fase a gironi creata: trascina le posizioni per cambiare la composizione.', 'good');
     }
     const opt = (t, title, icon, bullets, foot) => html`<button className=${'opt cut' + (type === t ? ' on' : '')} onClick=${() => setType(t)} aria-pressed=${type === t}>
       <span className="opt-h"><span className="opt-i">${icon}</span><span className="opt-t">${title}</span>${type === t ? html`<${Tag} tone="blue">Scelta<//>` : null}</span>
       ${bullets.map((b, i) => html`<span key=${i} className="li"><span className="ck">✓</span>${b}</span>`)}
       <span className="opt-f">${foot}</span></button>`;
+    const toggleSrc = (id) => setSrcIds(srcIds.includes(id) ? srcIds.filter((x) => x !== id) : [...srcIds, id]);
+    const pv = new Set(preview.map(kid));
     return html`<section className="win cut">
       <div className="add-body">
-        <div className="row"><${Tag} tone="blue">Fase ${newOrder}<//>${adding.mode === 'par' ? html`<${Tag} tone="ghost">In parallelo a #${ref.order} ${ref.name}<//>` : null}</div>
+        <div className="row"><${Tag} tone="blue">Fase ${newOrder}<//>${adding.mode === 'par' ? html`<${Tag} tone="ghost">In parallelo a #${ref.order} ${ref.name}<//>` : adding.mode === 'merge' ? html`<${Tag} tone="ghost">Unisce ${srcs.map((p) => p.name).join(' + ')}<//>` : null}</div>
         <h2 className="add-h">Che tipo di fase vuoi aggiungere?</h2>
-        ${src ? html`<div className="stack" style=${{ gap: 10 }}>
-          <div className="eb">Posizioni disponibili da #${src.order} ${src.name}</div>
-          <div className="pchips">${items.map((i) => html`<span key=${i.x.key} className=${'pchip' + (i.owner ? ' used' : '')} title=${i.owner ? `già in ${i.owner.name}` : 'libera'}>${posLabel(cat, { fromPhase: src.id, ranking: i.x.ranking, position: i.x.pos })}${i.owner ? html` <small>· ${i.owner.name}</small>` : null}</span>`)}</div>
-          <p className="hint" style=${{ margin: 0 }}>Chi passa lo decidi nella nuova fase, scegliendo quali posizioni usare. Quelle che nessuna fase usa escono dal torneo.${!free.length ? ' Al momento non ci sono posizioni libere.' : ''}</p>
+        ${needSrc ? html`<div className="stack" style=${{ gap: 10 }}>
+          <div className="eb">Prende le posizioni da</div>
+          <div className="pchips">${all.map((p) => { const on = srcIds.includes(p.id); const col = branchColor(cat, p); return html`<button key=${p.id} className=${'srcchip' + (on ? ' on' : '')} aria-pressed=${on} onClick=${() => toggleSrc(p.id)}>${on ? '✓ ' : '+ '}#${p.order} ${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</button>`; })}</div>
+          <span className="hint">Scegli una o più fasi. Con più fasi (per esempio Oro e Argento) la nuova fase le unisce: si parte dalle prime classificate di ognuna.</span>
+          ${perSrc.map((ps) => html`<div key=${ps.src.id} className="stack" style=${{ gap: 6 }}>
+            <span className="field-label">#${ps.src.order} ${ps.src.name} · ${KIND_TITLE[ps.kind]}</span>
+            <div className="pchips">${ps.items.map((i) => html`<span key=${kid(i.k)} className=${'pchip' + (i.owner ? ' used' : pv.has(kid(i.k)) ? '' : ' idle')} title=${i.owner ? `già in ${i.owner.name}` : pv.has(kid(i.k)) ? 'entra nella nuova fase' : 'libera, la puoi aggiungere dopo'}>${posLabel(cat, i.k)}${i.owner ? html` <small>· ${i.owner.name}</small>` : null}</span>`)}</div>
+          </div>`)}
+          <p className="hint" style=${{ margin: 0 }}>In verde le posizioni che entrano subito: poi le cambi trascinandole. Quelle che nessuna fase usa escono dal torneo.</p>
         </div>` : html`<p className="hint" style=${{ margin: 0 }}>È la prima fase: entrano tutte le ${teams} squadre iscritte, in ordine di testa di serie.</p>`}
         <div className="opts">
-          ${opt('GROUPS', 'Fase a gironi', '▦', [src ? 'Metti le posizioni che passano nei nuovi gironi.' : 'Le squadre vengono distribuite nei gironi per testa di serie; puoi spostarle trascinandole.', 'Produce le classifiche per girone, tra gironi e generale.', 'Dopo puoi aggiungere altre fasi.'], 'Il torneo continua →')}
-          ${opt('KNOCKOUT', 'Eliminazione diretta', '⊐', [src ? 'Metti le posizioni nel tabellone, dal turno che scegli; i BYE vanno alle prime teste di serie.' : 'Tabellone dalle teste di serie; i BYE vanno alle prime.', 'Produce i piazzamenti finali (finale, 3°/4° e altri se li attivi).', 'Puoi affiancare altri tabelloni (Oro, Argento…) con le posizioni rimaste.'], 'Decide i piazzamenti del ramo')}
+          ${opt('GROUPS', 'Fase a gironi', '▦', [needSrc ? 'Le posizioni entrano nei gironi a serpentina; le sposti trascinandole.' : 'Le squadre vengono distribuite nei gironi per testa di serie; puoi spostarle trascinandole.', 'Produce le classifiche per girone, tra gironi e generale.', 'Dopo puoi aggiungere altre fasi.'], 'Il torneo continua →')}
+          ${opt('KNOCKOUT', 'Eliminazione diretta', '⊐', [needSrc ? 'Le posizioni entrano nel tabellone dal turno che scegli; squadre e BYE si spostano trascinandoli.' : 'Tabellone dalle teste di serie; squadre e BYE si spostano trascinandoli.', 'Produce i piazzamenti finali (finale, 3°/4° e altri se li attivi).', 'Puoi affiancare altri tabelloni (Oro, Argento…) o unirli in una fase successiva.'], 'Decide i piazzamenti del ramo')}
         </div>
       </div>
       <footer className="win-foot">
         <button className="btn" onClick=${onCancel} disabled=${!cat.phases.length}>← Annulla</button>
         <span className="spacer"></span>
-        ${src && !free.length ? html`<span className="foot-msg warn">Nessuna posizione libera in #${src.order}: liberane una da un’altra fase.</span>` : null}
-        <button className="btn primary bev" disabled=${src && !free.length} onClick=${create}>Continua: configura ${type === 'GROUPS' ? 'i gironi' : 'il tabellone'} →</button>
+        ${needSrc && !srcs.length ? html`<span className="foot-msg warn">Scegli almeno una fase da cui prendere le posizioni.</span>` : needSrc && !freeN ? html`<span className="foot-msg warn">Nessuna posizione libera: liberane una da un’altra fase.</span>` : null}
+        <button className="btn primary bev" disabled=${needSrc && (!srcs.length || !freeN)} onClick=${create}>Continua: configura ${type === 'GROUPS' ? 'i gironi' : 'il tabellone'} →</button>
       </footer>
     </section>`;
   }
@@ -2329,7 +2375,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     return html`<div className="stack" style=${{ gap: 12 }}>
       <${Field} label="Partite" id=${'gm-' + phase.id}><select id=${'gm-' + phase.id} value=${cfg.games === 'N' ? cfg.gamesPerTeam : cfg.games} onChange=${(e) => { const v = e.target.value; upd(v === 'ALL_ONCE' || v === 'ALL_TWICE' ? { games: v } : { games: 'N', gamesPerTeam: +v }, 'Cambiare le partite'); }}>
         <option value="ALL_ONCE">Tutte contro tutte</option><option value="ALL_TWICE">Andata e ritorno</option>${Array.from({ length: 12 }, (_, i) => html`<option key=${i} value=${i + 1}>${i + 1} ${i ? 'partite' : 'partita'} a squadra</option>`)}</select><//>
-      <${Field} label="Durata partita (min)" id=${'gl-' + phase.id}><input id=${'gl-' + phase.id} type="number" min="5" step="5" value=${TE.gameLengthFor(st, cat, phase)} onChange=${(e) => act((d, c) => { TE.findPhase(c, phase.id).config.gameLength = +e.target.value || null; })} /><//>
+      <${Field} label="Durata stimata di una partita (min)" id=${'gl-' + phase.id} hint="Serve solo a preparare il programma: è una stima, non un tempo da giocare per forza."><input id=${'gl-' + phase.id} type="number" min="5" step="5" value=${TE.gameLengthFor(st, cat, phase)} onChange=${(e) => act((d, c) => { TE.findPhase(c, phase.id).config.gameLength = +e.target.value || null; })} /><//>
     </div>`;
   }
 
@@ -2355,9 +2401,8 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
           <${Stepper} id=${'sp-' + phase.id} label="Squadre per girone" value=${sizes.join(' · ')} readOnly=${true} hint="Cambiale trascinando le squadre" />
         </div>
         <div className="count-box"><span className="eb" style=${{ color: 'var(--green-ink)' }}>Squadre nei gironi</span><b>${inPools}<small> / ${n}</small></b><span className="small">Ogni girone gioca ${gamesPerTeam(phase)} partite a squadra · totale ${games}</span></div>
-        <${Field} label="Distribuzione" id=${'ds-' + phase.id}><select id=${'ds-' + phase.id} value=${cfg.distribution} onChange=${(e) => guard('Cambiare la distribuzione', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: e.target.value, manualPools: null } })))}>${Object.entries(TE.DISTRIBUTIONS).filter(([k]) => k !== 'AVOID_REMATCH').filter(([k]) => k !== 'MANUAL' || cfg.distribution === 'MANUAL').map(([k, l]) => html`<option key=${k} value=${k}>${k === 'MANUAL' ? 'Manuale (spostamenti a mano)' : l}</option>`)}</select><//>
         <${GamesOptions} ...${ctx} />
-        <p className="info">I gironi vengono riempiti in automatico per testa di serie. Trascina una squadra su un’altra per <b>scambiarle</b>, o in uno spazio libero per spostarla.</p>
+        <p className="info">I gironi vengono riempiti per testa di serie, a serpentina. Trascina una squadra su un’altra per <b>scambiarle</b>, o nello spazio “Trascina qui” di un girone per spostarla: così cambi anche quante squadre ha ogni girone.</p>
       </aside>
       <div className="win-main">
         <div className="row" style=${{ justifyContent: 'space-between' }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span><button className="btn sm" onClick=${() => guard('Ridistribuire le squadre', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: 'SNAKE', manualPools: null } })))}>↻ Ridistribuisci per testa di serie</button></div>
@@ -2464,12 +2509,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const keyAt = groups.map((g) => g.map((i) => keys[i]));
     const enginePools = phase.pools.length;
     // salva: chiavi in ordine girone per girone + manualPools con gli id che il motore assegnerà (e_<fase>_<n>)
-    const save = (pk, sz, msg) => {
-      const flat = pk.flat();
-      let o = 0;
-      const manual = pk.map((list, pi) => ({ number: pi + 1, name: `Group ${LETTER(pi + 1)}`, ids: list.map(() => `e_${phase.id}_${++o}`) }));
-      commit(flat, { distribution: 'MANUAL', pools: pk.length, manualPools: manual, poolSizes: sz }, msg);
-    };
+    const save = (pk, sz, msg) => commit(pk.flat(), manualCfg(phase.id, pk, sz), msg);
     const locate = (k) => { for (let p = 0; p < keyAt.length; p++) { const j = keyAt[p].findIndex((x) => kid(x) === kid(k)); if (j >= 0) return [p, j]; } return null; };
     const clonePK = () => keyAt.map((l) => l.slice());
     // metti la posizione k nel posto (p, j): scambio se è già nella fase, sostituzione o riempimento se è libera
@@ -2488,9 +2528,9 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
     const fillEmpty = () => {
       const own = ownerMap(cat, phase.id); const mine = new Set(keys.map(kid));
       const src = TE.findPhase(cat, srcId) || TE.findPhase(cat, (keys[0] || {}).fromPhase); if (!src) return;
-      const free = rankingItems(cat, src, kindsFor(src).includes(kind) ? kind : kindsFor(src)[0]).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !mine.has(kid(k))).sort((a, b) => a.position - b.position);
+      const free = rankingItems(cat, src, kindsFor(src).includes(kind) ? kind : kindsFor(src)[0]).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !mine.has(kid(k))).sort(byRank);
       const pk = clonePK(); let added = 0;
-      for (let r = 0; r < Math.max(...sizes); r++) for (let p = 0; p < pk.length; p++) if (r < sizes[p] && r >= pk[p].length && free.length) { pk[p].push(free.shift()); added++; }
+      snakePlaces(sizes).forEach(([p, r]) => { if (r >= pk[p].length && free.length) { pk[p].push(free.shift()); added++; } });
       if (!added) return say('Nessuna posizione libera da mettere nei posti vuoti.', 'warn');
       save(pk, sizes, `${added} posti riempiti con le posizioni libere.`);
     };
@@ -2501,6 +2541,17 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       return { cls: 'free', text: 'Libera', title: 'Clic o trascina per aggiungere' };
     };
     const dropOn = (p, j) => (pl) => (pl.from === 'list' ? place(pl.key, p, j) : pl.from === 'gplace' ? movePlace(pl.p, pl.j, p, j) : null);
+    // cambio di classifica: le posizioni già messe da quella fase vengono sostituite con la nuova classifica, negli stessi posti
+    const switchKind = (kk) => {
+      setKind(kk);
+      const src = TE.findPhase(cat, srcId) || TE.findPhase(cat, (keys[0] || {}).fromPhase); if (!src) return;
+      const placesOf = snakePlaces(sizes).filter(([p, r]) => keyAt[p][r] && keyAt[p][r].fromPhase === src.id);
+      if (!placesOf.length || placesOf.every(([p, r]) => kindOfRanking(keyAt[p][r].ranking, src) === kk)) return;
+      const own = ownerMap(cat, phase.id); const keep = new Set(keys.filter((k) => k.fromPhase !== src.id).map(kid));
+      const cand = rankingItems(cat, src, kk).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !keep.has(kid(k))).sort(byRank);
+      const pk = clonePK(); placesOf.forEach(([p, r]) => { pk[p][r] = cand.shift() || null; });
+      save(pk.map((l) => l.filter(Boolean)), sizes, `Posizioni sostituite con la classifica “${KIND_TITLE[kk]}”.`);
+    };
     const nextFor = (p, j) => (k) => { const pk = clonePK(); if (j < pk[p].length) pk[p][j] = k; else pk[p].push(k); return pk.flat(); };
     const empties = sizes.reduce((s, z, i) => s + Math.max(0, z - keyAt[i].length), 0);
     return html`<div className="win-body">
@@ -2509,12 +2560,10 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
           <${Stepper} id=${'np-' + phase.id} label="N° gironi" value=${keyAt.length} min=${1} max=${16} onChange=${setPools} />
           <${Stepper} id=${'sp-' + phase.id} label="Posti per girone" value=${Math.max(...sizes)} min=${1} max=${16} onChange=${setAllSizes} hint=${new Set(sizes).size > 1 ? `ora: ${sizes.join(' · ')}` : null} />
         </div>
-        <${PositionsList} cat=${cat} phase=${phase} keys=${keys} statusOf=${statusOf} onToggle=${toggle} kind=${kind} setKind=${setKind} srcId=${srcId} setSrc=${setSrc} title=${(u, f) => `${u} usate · ${f} libere`} over=${over} setOver=${setOver} onDropBack=${(pl) => pl.from === 'gplace' && removeAt(pl.p, pl.j)} />
+        <${PositionsList} cat=${cat} phase=${phase} keys=${keys} statusOf=${statusOf} onToggle=${toggle} kind=${kind} setKind=${switchKind} srcId=${srcId} setSrc=${setSrc} title=${(u, f) => `${u} usate · ${f} libere`} over=${over} setOver=${setOver} onDropBack=${(pl) => pl.from === 'gplace' && removeAt(pl.p, pl.j)} />
         <p className="info">Le posizioni libere si possono usare in una fase <b>in parallelo</b>. Se restano libere, quelle squadre escono dal torneo.</p>
         <label className="check"><input type="checkbox" checked=${phase.inheritPoints} onChange=${(e) => guard('Cambiare i punti ereditati', () => act((d, c) => TE.updatePhase(d, c, phase.id, { inheritPoints: e.target.checked })))} /> Porta punti e statistiche dalla fase precedente</label>
         <${GamesOptions} ...${ctx} />
-        <${Field} label="Composizione" id=${'ds-' + phase.id} hint=${cfg.distribution === 'AVOID_REMATCH' ? 'I gironi si compongono quando la fase precedente viene confermata.' : 'Se sposti una squadra la composizione diventa manuale.'}><select id=${'ds-' + phase.id} value=${auto ? cfg.distribution : 'MANUAL'} onChange=${(e) => (e.target.value === 'MANUAL' ? save(keyAt, sizes, 'Composizione manuale.') : guard('Cambiare la composizione', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: { distribution: e.target.value, manualPools: null, pools: keyAt.length } }))))}>
-          <option value="MANUAL">Manuale (scegli e trascina)</option><option value="SNAKE">A serpentina (ordine delle posizioni)</option><option value="SEQUENTIAL">In ordine delle posizioni</option><option value="AVOID_REMATCH">Automatica, evita le rivincite</option></select><//>
       </aside>
       <div className="win-main">
         <div className="row" style=${{ justifyContent: 'space-between' }}><span className="sub-t" style=${{ margin: 0 }}>Composizione gironi</span>${empties ? html`<button className="btn sm" onClick=${fillEmpty}>Riempi i ${empties} posti vuoti</button>` : null}</div>
@@ -2568,7 +2617,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       saveKO(nk, ns);
     };
     const removeSlot = (si) => { const t = slots[si]; if (t == null) return; const nk = keys.filter((_, i) => i !== t); const ns = slots.map((x) => (x == null || x === t ? null : x > t ? x - 1 : x)); saveKO(nk, ns); };
-    const freeKeys = () => { const src = TE.findPhase(cat, srcId) || TE.findPhase(cat, (keys[0] || {}).fromPhase) || TE.sortedPhases(cat).filter((p) => p.order < phase.order).pop(); if (!src) return []; return rankingItems(cat, src, kindsFor(src).includes(kind) ? kind : kindsFor(src)[0]).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !mineIds.has(kid(k))).sort((a, b) => a.position - b.position); };
+    const freeKeys = () => { const src = TE.findPhase(cat, srcId) || TE.findPhase(cat, (keys[0] || {}).fromPhase) || TE.sortedPhases(cat).filter((p) => p.order < phase.order).pop(); if (!src) return []; return rankingItems(cat, src, kindsFor(src).includes(kind) ? kind : kindsFor(src)[0]).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !mineIds.has(kid(k))).sort(byRank); };
     const avail = root ? n : n + freeKeys().length;
     // "Parti da": cambia la dimensione del tabellone, aggiunge posizioni libere o toglie le ultime teste di serie
     const setRound = (size) => {
@@ -2591,6 +2640,23 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
       return { cls: 'free', text: 'Non usata', title: 'Clic o trascina per aggiungere' };
     };
     const dropOn = (si) => (pl) => (pl.from === 'list' ? placeKey(pl.key, si) : pl.from === 'kslot' ? swapSlots(pl.si, si) : null);
+    // cambio di classifica: stesse teste di serie e stessi posti, posizioni prese dalla nuova classifica in ordine di merito
+    const switchKind = (kk) => {
+      setKind(kk);
+      if (root) return;
+      const src = TE.findPhase(cat, srcId) || TE.findPhase(cat, (keys[0] || {}).fromPhase); if (!src) return;
+      const idxs = keys.map((k, i) => i).filter((i) => keys[i].fromPhase === src.id);
+      if (!idxs.length || idxs.every((i) => kindOfRanking(keys[i].ranking, src) === kk)) return;
+      const keep = new Set(keys.filter((k) => k.fromPhase !== src.id).map(kid));
+      const cand = rankingItems(cat, src, kk).map((x) => ({ fromPhase: src.id, ranking: x.ranking, position: x.pos })).filter((k) => !own[kid(k)] && !keep.has(kid(k))).sort(byRank);
+      const nk = keys.slice(); idxs.forEach((i) => { nk[i] = cand.shift() || null; });
+      const drop = new Set(nk.map((k, i) => (k ? -1 : i)).filter((i) => i >= 0));
+      const remap = {}; let c = 0; nk.forEach((k, i) => { if (k) remap[i] = c++; });
+      let ns = slots.map((x) => (x == null || drop.has(x) ? null : remap[x]));
+      const fk = nk.filter(Boolean);
+      if (byeByePair(ns)) ns = TE.seedOrder(nextPow2(Math.max(2, fk.length))).map((x) => (x <= fk.length ? x - 1 : null));
+      commit(fk, { layout: ns }, `Posizioni sostituite con la classifica “${KIND_TITLE[kk]}”.`);
+    };
     const sameGroup = lay.pairs.filter((p) => !p.bye).map((p) => { const [a, b] = p.slots.map((s) => keys[slots[s]]); return a && b && a.ranking.startsWith('pool:') && a.ranking === b.ranking && a.fromPhase === b.fromPhase ? p.code : null; }).filter(Boolean);
     const slotEl = (si) => {
       const t = slots[si]; const e = t == null ? null : phase.entrants[t]; const id = 'k' + si;
@@ -2611,7 +2677,7 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
           <div className="rounds">${ROUND_BTNS.map((sz) => { const cur = lay.size === sz; const after = Math.min(sz, avail); const ok = root ? sz >= n && n > sz / 2 : sz === 2 ? avail >= 2 : after > sz / 2; return html`<button key=${sz} className=${cur ? 'on' : ''} disabled=${!ok && !cur} onClick=${() => !cur && setRound(sz)}>${ROUND[sz][0]}</button>`; })}</div>
           <span className="hint">Proposti i turni che ${avail} ${root ? 'squadre' : 'posizioni'} possono riempire. I posti vuoti sono BYE: puoi spostarli dove vuoi.</span></div>` : null}
         ${root ? html`<div className="stack" style=${{ gap: 6 }}><span className="field-label">Squadre iscritte</span><div className="plist">${phase.entrants.map((e, i) => html`<div key=${e.id} className="prow mine"><span>${entLabel(cat, phase, e)}</span><span className="pst">${lay.entrantCode(i)}</span></div>`)}</div></div>`
-          : html`<${PositionsList} cat=${cat} phase=${phase} keys=${keys} statusOf=${statusOf} onToggle=${toggle} kind=${kind} setKind=${setKind} srcId=${srcId} setSrc=${setSrc} title=${() => `${n} nel tabellone`} over=${over} setOver=${setOver} onDropBack=${(pl) => pl.from === 'kslot' && removeSlot(pl.si)} />`}
+          : html`<${PositionsList} cat=${cat} phase=${phase} keys=${keys} statusOf=${statusOf} onToggle=${toggle} kind=${kind} setKind=${switchKind} srcId=${srcId} setSrc=${setSrc} title=${() => `${n} nel tabellone`} over=${over} setOver=${setOver} onDropBack=${(pl) => pl.from === 'kslot' && removeSlot(pl.si)} />`}
         ${kind === 'CROSS' && !root ? html`<${CrossCriteria} ...${ctx} />` : null}
         <div className="stack" style=${{ gap: 8 }}><span className="field-label">Formato</span>
           <div className="seg full" role="radiogroup">${[[1, 'Fuori dopo 1 sconfitta'], [2, 'Dopo 2 (tabellone perdenti)']].map(([k, l]) => html`<button key=${k} role="radio" aria-checked=${cfg.eliminations === k} className=${cfg.eliminations === k ? 'on' : ''} onClick=${() => cfg.eliminations !== k && upd({ eliminations: k })}>${l}</button>`)}</div>
