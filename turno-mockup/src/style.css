@@ -418,3 +418,10 @@ pre.json { background: var(--side); color: #D6DEF0; padding: 14px; font-size: 12
 .de-sec.final { border-left-color: #D97706; }
 .de-final { display: flex; gap: 16px; flex-wrap: wrap; padding-bottom: 10px; }
 .de-final .m { width: 270px; }
+
+/* liste riordinabili */
+li.sortable { cursor: grab; }
+li.sortable.over { outline: 2px dashed var(--blue); outline-offset: 1px; }
+li.sortable .handle { color: #9CA3AF; }
+.tie-box li { justify-content: flex-start; gap: 8px; background: rgba(255,255,255,.6); padding: 4px 6px; margin-bottom: 3px; list-style: none; }
+.tie-box ol { padding-left: 0; }

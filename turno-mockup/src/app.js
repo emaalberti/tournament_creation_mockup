@@ -54,6 +54,18 @@
   const typeLabel = (t) => TE.PHASE_TYPES[t].label;
   const kindWord = (phase) => (TE.PHASE_TYPES[phase.type].kind === 'PLAYER' ? 'giocatori' : 'squadre');
 
+  // riordino con drag & drop (criteri, parità, coda partite): props(lista, indice, classi) da mettere sul <li>
+  const moveArr = (a, from, to) => { const x = a.splice(from, 1)[0]; a.splice(to, 0, x); return a; };
+  function useSortable(onMove) {
+    const [over, setOver] = useState(null);
+    return (list, i, cls) => ({
+      draggable: 'true', className: (cls || '') + ' sortable' + (over === list + ':' + i ? ' over' : ''), title: 'Trascina per cambiare l’ordine',
+      onDragStart: (e) => { DRAG = { from: 'sort', list, i }; try { e.dataTransfer.setData('text/plain', 'x'); e.dataTransfer.effectAllowed = 'move'; } catch (x) { /* ignora */ } },
+      onDragEnd: () => { DRAG = null; setOver(null); },
+      onDragOver: (e) => { if (DRAG && DRAG.from === 'sort' && DRAG.list === list) { e.preventDefault(); if (over !== list + ':' + i) setOver(list + ':' + i); } },
+      onDrop: (e) => { e.preventDefault(); const d = DRAG; DRAG = null; setOver(null); if (d && d.from === 'sort' && d.list === list && d.i !== i) onMove(list, d.i, i); },
+    });
+  }
   function Modal({ title, children, onClose, footer }) {
     useEffect(() => { const k = (e) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, []);
     return html`<div className="modal-back" onMouseDown=${(e) => e.target === e.currentTarget && onClose()}>
@@ -194,6 +206,7 @@
     return hs.indexOf(t) === 0 ? 'Scontro diretto' : `Scontro diretto · ${ruleName(t.rule, sportKey).toLowerCase()}`;
   }
   function RulesView({ st, cat, sport, act }) {
+    const sortP = useSortable((list, from, to) => act((d, c) => { moveArr(c.format.tiebreakers, from, to); }));
     const [newRule, setNewRule] = useState('WINS');
     const [newScope, setNewScope] = useState('O');
     const f = cat.format;
@@ -210,14 +223,11 @@
         </div>
         <div>
           <div className="sub-t">Criteri di spareggio, in ordine</div>
-          <ol className="tb-list">${f.tiebreakers.map((t, i) => html`<li key=${i}>
-            <span className="rk">${i + 1}</span>
+          <ol className="tb-list">${f.tiebreakers.map((t, i) => html`<li key=${t.rule + t.scope} ...${sortP('tb', i)}>
+            <span className="handle" aria-hidden="true">⠿</span><span className="rk">${i + 1}</span>
             <span className="nm">${tbName(t, f.tiebreakers, st.tournament.sport)}</span>
-            <span className="row tight">
-              <button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => set((x) => { const a = x.tiebreakers; [a[i - 1], a[i]] = [a[i], a[i - 1]]; })}>↑</button>
-              <button className="icon-btn" aria-label="Giù" disabled=${i === f.tiebreakers.length - 1} onClick=${() => set((x) => { const a = x.tiebreakers; [a[i + 1], a[i]] = [a[i], a[i + 1]]; })}>↓</button>
-              <button className="icon-btn" aria-label="Rimuovi" onClick=${() => set((x) => { x.tiebreakers.splice(i, 1); })}>×</button>
-            </span></li>`)}</ol>
+            <button className="icon-btn" aria-label="Rimuovi" onClick=${() => set((x) => { x.tiebreakers.splice(i, 1); })}>×</button></li>`)}</ol>
+          <span className="hint">Trascina i criteri per cambiare l’ordine: si applicano dall’alto verso il basso.</span>
           <div className="row">
             <select id="tb-rule" aria-label="Criterio" value=${newRule} onChange=${(e) => setNewRule(e.target.value)}>
               ${rules.filter((r) => !f.tiebreakers.some((t) => t.rule === r && t.scope === 'O')).map((r) => html`<option key=${r} value=${r}>${ruleName(r, st.tournament.sport)}</option>`)}
@@ -1077,9 +1087,9 @@
   }
   function CrossCriteria({ st, cat, act }) {
     const f = cat.format; const sportKey = st.tournament.sport;
-    const set = (fn) => act((d, c) => fn(c.format));
-    return html`<div className="stack" style=${{ gap: 6 }}><div className="row" style=${{ justifyContent: 'space-between' }}><span className="field-label">Criteri classifica tra gironi</span><span className="hint">ordine</span></div>
-      <ol className="tb-list compact">${f.tiebreakers.filter((t) => t.scope === 'O').map((t, i, arr) => { const gi = f.tiebreakers.indexOf(t); return html`<li key=${gi}><span className="rk">${i + 1}</span><span className="nm">${ruleName(t.rule, sportKey)}</span><span className="row tight"><button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i - 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↑</button><button className="icon-btn" aria-label="Giù" disabled=${i === arr.length - 1} onClick=${() => set((x) => { const a = x.tiebreakers; const gj = a.indexOf(a.filter((q) => q.scope === 'O')[i + 1]); [a[gj], a[gi]] = [a[gi], a[gj]]; })}>↓</button></span></li>`; })}</ol>
+    const sortP = useSortable((list, from, to) => act((d, c) => { const a = c.format.tiebreakers; const os = a.filter((q) => q.scope === 'O'); moveArr(os, from, to); let k = 0; a.forEach((q, gi) => { if (q.scope === 'O') a[gi] = os[k++]; }); }));
+    return html`<div className="stack" style=${{ gap: 6 }}><div className="row" style=${{ justifyContent: 'space-between' }}><span className="field-label">Criteri classifica tra gironi</span><span className="hint">trascina per ordinare</span></div>
+      <ol className="tb-list compact">${f.tiebreakers.filter((t) => t.scope === 'O').map((t, i) => html`<li key=${t.rule} ...${sortP('cross', i)}><span className="handle" aria-hidden="true">⠿</span><span className="rk">${i + 1}</span><span className="nm">${ruleName(t.rule, sportKey)}</span></li>`)}</ol>
       <span className="hint">Con gironi di dimensioni diverse si confronta la <b>media per partita</b>. Valgono per tutta la categoria.</span></div>`;
   }
   function KoCard({ st, cat, g, code, codes, onGame, tone, title }) {
@@ -1283,11 +1293,12 @@
     const orderOf = (t) => { const m = phase.tieOrders[t.key]; return m && m.length === t.ids.length && m.every((x) => t.ids.includes(x)) ? m : null; };
     const unresolved = ties.filter((t) => !orderOf(t));
     const setOrder = (key, ids) => act((d, c) => { TE.findPhase(c, phase.id).tieOrders[key] = ids; });
+    const sortP = useSortable((key, from, to) => { const t = ties.find((x) => x.key === key); if (!t) return; setOrder(key, moveArr((orderOf(t) || t.ids).slice(), from, to)); });
     return html`<div className="confirm">
       <div className="sub-t">Conferma ${phase.name}${next.length ? ` e riempi ${next.map((x) => x.name).join(', ')}` : ''}</div>
-      ${ties.length ? html`<p style=${{ margin: 0 }}>Ordina le squadre a pari merito dove decidono un posto, poi tieni l’ordine.</p>
+      ${ties.length ? html`<p style=${{ margin: 0 }}>Trascina le squadre a pari merito nell’ordine giusto dove decidono un posto, poi tieni l’ordine.</p>
         <div className="ties">${ties.map((t) => { const ids = orderOf(t) || t.ids; return html`<div key=${t.key} className=${'tie-box' + (orderOf(t) ? ' ok' : '')}><div className="b small">${T(t.title)}${orderOf(t) ? ' · ordinata' : ''}</div>
-          <ol>${ids.map((id, i) => html`<li key=${id}>${nameOf(id)}<span className="row tight"><button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => { const a = ids.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setOrder(t.key, a); }}>↑</button><button className="icon-btn" aria-label="Giù" disabled=${i === ids.length - 1} onClick=${() => { const a = ids.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; setOrder(t.key, a); }}>↓</button></span></li>`)}</ol>
+          <ol>${ids.map((id, i) => html`<li key=${id} ...${sortP(t.key, i)}><span className="handle" aria-hidden="true">⠿</span><span style=${{ flex: 1 }}>${nameOf(id)}</span></li>`)}</ol>
           ${orderOf(t) ? null : html`<${Btn} kind="sm" onClick=${() => setOrder(t.key, ids)}>Tieni questo ordine<//>`}</div>`; })}</div>` : html`<${Note} tone="good">Non ci sono parità da risolvere.<//>`}
       <div className="row"><${Btn} kind="primary" disabled=${unresolved.length > 0} onClick=${() => { const r = act((d, c) => { const out = TE.confirmPhase(d, c, TE.findPhase(c, phase.id)); if (out.ok && d.tournament.scheduling === 'QUEUE') TE.fillCourts(d); return out; }); r.ok ? say(`${phase.name} confermata.`, 'good') : say(r.error, 'bad'); }}>Conferma ${phase.name}<//></div>
     </div>`;
@@ -1363,6 +1374,8 @@
       return 'Pronta';
     };
     const queue = s.queue.map((id) => TE.findGame(st, id)).filter(Boolean).filter((f) => !Object.values(s.courts).includes(f.game.id));
+    // riordina le partite visibili mantenendo le altre al loro posto
+    const sortP = useSortable((list, from, to) => act((d) => { const q = d.schedule.queue; const shown = queue.map((x) => x.game.id); const pos = shown.map((id) => q.indexOf(id)); moveArr(shown, from, to); pos.forEach((p, k) => { q[p] = shown[k]; }); }));
     return html`<div className="stack">
       <${Card} eb="Campi in uso" actions=${html`<label className="check"><input type="checkbox" checked=${s.auto} onChange=${(e) => act((d) => { d.schedule.auto = e.target.checked; if (e.target.checked) TE.fillCourts(d); })} /> Assegnazione automatica</label><${Btn} kind="sm" onClick=${() => act((d) => { TE.fillCourts(d); })}>Riempi i campi liberi<//>`}>
         <div className="checks">${spaces.map((sp) => html`<label key=${sp.id} className="check"><input type="checkbox" checked=${sp.id in s.courts} onChange=${(e) => act((d) => { if (e.target.checked) d.schedule.courts[sp.id] = null; else delete d.schedule.courts[sp.id]; })} /> ${sp.name}</label>`)}</div>
@@ -1373,10 +1386,10 @@
           : !s.auto ? html`<select aria-label="Assegna partita" value="" onChange=${(e) => e.target.value && act((d) => { d.schedule.courts[sp.id] = e.target.value; })}><option value="">Assegna una partita…</option>${queue.filter((q) => why(q) === 'Pronta').map((q) => html`<option key=${q.game.id} value=${q.game.id}>#${q.game.number} ${T(TE.sourceLabel(st, q.cat, q.game.home))} – ${T(TE.sourceLabel(st, q.cat, q.game.away))}</option>`)}</select>` : html`<p className="hint" style=${{ margin: 0 }}>Nessuna partita può iniziare: quelle in coda aspettano una squadra o un risultato.</p>`}
         </div>`; })}</div>
       <//>
-      <${Card} eb="Prossime partite" sub="La prima partita pronta prende il prossimo campo libero. Riordina per distanziare le partite di una squadra o dare priorità a una categoria." actions=${html`<${Btn} kind="ghost sm" onClick=${() => { act((d) => { TE.buildQueue(d); }); say('Coda ricostruita dalle fasi.', 'good'); }}>Ricostruisci coda<//>`}>
-        ${queue.length ? html`<ol className="queue">${queue.slice(0, 40).map((f, i) => html`<li key=${f.game.id}><span className="tag dark"><span>${i + 1}</span></span><span className="q"><span className="muted small">${f.cat.name} · #${f.game.number} ${T(f.game.label)}</span><span>${T(TE.sourceLabel(st, f.cat, f.game.home))} – ${T(TE.sourceLabel(st, f.cat, f.game.away))}</span></span>
+      <${Card} eb="Prossime partite" sub="La prima partita pronta prende il prossimo campo libero. Trascina le partite per distanziare le partite di una squadra o dare priorità a una categoria." actions=${html`<${Btn} kind="ghost sm" onClick=${() => { act((d) => { TE.buildQueue(d); }); say('Coda ricostruita dalle fasi.', 'good'); }}>Ricostruisci coda<//>`}>
+        ${queue.length ? html`<ol className="queue">${queue.slice(0, 40).map((f, i) => html`<li key=${f.game.id} ...${sortP('queue', i)}><span className="handle" aria-hidden="true">⠿</span><span className="tag dark"><span>${i + 1}</span></span><span className="q"><span className="muted small">${f.cat.name} · #${f.game.number} ${T(f.game.label)}</span><span>${T(TE.sourceLabel(st, f.cat, f.game.home))} – ${T(TE.sourceLabel(st, f.cat, f.game.away))}</span></span>
           <${Tag} tone=${why(f) === 'Pronta' ? 'green' : ''}>${why(f)}<//>
-          <span className="row tight"><button className="icon-btn" aria-label="Su" disabled=${i === 0} onClick=${() => act((d) => { const q = d.schedule.queue; const a = q.indexOf(f.game.id), b = q.indexOf(queue[i - 1].game.id); [q[a], q[b]] = [q[b], q[a]]; })}>↑</button><button className="icon-btn" aria-label="Giù" disabled=${i === queue.length - 1} onClick=${() => act((d) => { const q = d.schedule.queue; const a = q.indexOf(f.game.id), b = q.indexOf(queue[i + 1].game.id); [q[a], q[b]] = [q[b], q[a]]; })}>↓</button></span></li>`)}</ol>
+</li>`)}</ol>
           ${queue.length > 40 ? html`<p className="hint">+ altre ${queue.length - 40}</p>` : null}` : html`<${Note}>La coda è vuota. Ricostruiscila dopo aver generato le partite.<//>`}
       <//>
     </div>`;
