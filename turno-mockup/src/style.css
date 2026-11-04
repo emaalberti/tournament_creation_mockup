@@ -105,8 +105,11 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
 .tbl th { text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 800; padding: 8px 10px; border-bottom: 2px solid var(--line-soft); white-space: nowrap; }
 .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--line-soft); }
 .tbl .n { text-align: right; font-variant-numeric: tabular-nums; }
-.tbl tr.adv td { background: var(--green-bg); }
 .tbl tr.adv td:first-child { box-shadow: inset 4px 0 0 var(--green); }
+.tbl tr.adv.todo td:first-child { box-shadow: inset 4px 0 0 #F59E0B; }
+.legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.legend .bar { display: inline-block; width: 4px; height: 14px; background: var(--green); margin-left: 8px; }
+.legend .bar:first-child { margin-left: 0; } .legend .bar.todo { background: #F59E0B; }
 .tie { color: var(--warn); font-weight: 800; margin-left: 2px; }
 .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .cat-chips button { border: 1px solid var(--line); background: var(--card); padding: 6px 14px; font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
@@ -256,7 +259,10 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
 .more { position: relative; font-size: 13px; }
 .more summary { cursor: pointer; font-weight: 700; color: var(--blue-ink); }
 .more-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; background: var(--card); border: 1px solid var(--line); padding: 12px; width: 240px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 20px rgba(17,24,39,.12); }
-.ko { display: flex; gap: 26px; overflow-x: auto; padding-bottom: 10px; }
+.ko { display: flex; gap: 26px; overflow-x: auto; padding-bottom: 10px; position: relative; z-index: 0; }
+.ko-lines { position: absolute; left: 0; top: 0; z-index: -1; pointer-events: none; }
+.ko-lines path { fill: none; stroke: #9CA3AF; stroke-width: 1.5; }
+.bye-sub { font-size: 9.5px; letter-spacing: .5px; font-weight: 700; text-transform: none; color: var(--muted); margin-left: 4px; }
 .ko-col { display: flex; flex-direction: column; min-width: 236px; flex: 1 0 236px; }
 .ko .colh { font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-2); padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 16px; }
 .ko .lane { display: flex; flex-direction: column; justify-content: space-around; gap: 16px; flex: 1; }
@@ -427,8 +433,17 @@ li.sortable .handle { color: #9CA3AF; }
 .tie-box ol { padding-left: 0; }
 
 /* nome della fase nella finestra */
-.win-name { font-size: 22px; font-weight: 800; letter-spacing: -.3px; border: 1px solid transparent; padding: 2px 6px; min-width: 0; width: 260px; background: transparent; }
-.win-name:hover { border-color: var(--line-soft); } .win-name:focus { border-color: var(--blue); background: var(--card); }
+.win-name-wrap { display: inline-flex; align-items: center; border: 1px dashed var(--line); background: var(--card); cursor: text; }
+.win-name-wrap:hover { border-color: var(--blue); border-style: solid; } .win-name-wrap:focus-within { border: 1px solid var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.win-name { font-size: 22px; font-weight: 800; letter-spacing: -.3px; border: 0; padding: 2px 8px; min-width: 0; width: 240px; background: transparent; outline: none; }
+.win-name-wrap .pen { font-size: 11px; font-weight: 800; color: var(--blue-ink); padding: 0 10px; white-space: nowrap; letter-spacing: .3px; }
+.pool-name { display: inline-flex; align-items: center; gap: 4px; min-width: 0; flex: 1; cursor: text; }
+.pool-name input { background: transparent; border: 1px dashed rgba(255,255,255,.35); color: inherit; font: inherit; letter-spacing: inherit; text-transform: uppercase; padding: 1px 6px; min-width: 0; width: 100%; max-width: 170px; }
+.pool-name input::placeholder { color: inherit; opacity: 1; }
+.pool-name input:focus { outline: none; border-style: solid; border-color: #fff; text-transform: none; }
+.pool-name.light input { border-color: var(--line); } .pool-name.light input:focus { border-color: var(--blue); background: var(--card); }
+.pool-name .pen { font-size: 11px; opacity: .7; }
+.pool-h { align-items: center; gap: 8px; }
 .riep-link { margin-left: auto; color: var(--blue-ink); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--blue-ink); font-weight: 700; text-decoration: underline; }
 
@@ -510,6 +525,8 @@ li.sortable .handle { color: #9CA3AF; }
 .gcard:hover { box-shadow: 0 3px 10px rgba(17,24,39,.15); }
 .gcard .gc-top { display: flex; gap: 6px; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gcard .gc-top b { color: var(--ink); }
+.gcard .gc-h { color: var(--muted); font-weight: 800; }
+.gcard:active { cursor: grabbing; }
 .gcard .gc-t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gcard.dim { opacity: .25; }
 .gcard.clash { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad-bg); }
@@ -522,3 +539,12 @@ li.sortable .handle { color: #9CA3AF; }
 
 .mx-time.q, .mx-cell.q { border-left-color: transparent; }
 .mx-cell.half:not(.q) { border-left: 1px dotted var(--line-soft); }
+
+/* informazioni torneo: logo */
+.t-logo { width: 28px; height: 28px; object-fit: contain; }
+.logo-pick { display: flex; align-items: center; gap: 14px; }
+.logo-pick img, .logo-empty { width: 72px; height: 72px; object-fit: contain; border: 1px solid var(--line-soft); background: var(--card); }
+.logo-empty { display: grid; place-items: center; font-size: 11px; color: var(--muted); text-align: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.tb-list.locked li { cursor: default; opacity: .8; }
+.seg button:disabled, .bo-pick button:disabled { cursor: not-allowed; opacity: .55; }

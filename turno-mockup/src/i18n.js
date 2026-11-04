@@ -56,7 +56,7 @@
     [/Lower Final/g, 'Finale perdenti'], [/Lower Round (\d+)/g, 'Perdenti · turno $1'],
     [re('#O Place Semis'), '$1° posto · semifinali'], [re('#O Place Round of (\\d+)'), (m, a, b) => `${a}° posto · ${roundOf(+b).toLowerCase()}`], [re('#O Place'), '$1° posto'],
     [/Semi Finals/g, 'Semifinali'], [/Quarter Finals/g, 'Quarti'], [/Round of (\d+)/g, (m, n) => roundOf(+n)],
-    [/Final placings/g, 'Piazzamenti finali'], [/Players by points won/g, 'Giocatori per punti'], [/Overall \(per-game averages\)/g, 'Generale (medie per partita)'], [/Each group/g, 'Ogni girone'],
+    [/Final placings/g, 'Piazzamenti finali'], [/Players by points won/g, 'Giocatori per punti'], [/Overall \(per-game averages\)/g, 'Generale'], [/Each group/g, 'Ogni girone'],
     [/\bFinal\b/g, 'Finale'], [/Winner of (\d+)/g, 'Vincente #$1'], [/Loser of (\d+)/g, 'Perdente #$1'],
     [/\bConsolation\b/g, 'Consolazione'], [/\bTBD\b/g, 'Da definire'], [/\bRound (\d+)\b/g, 'Turno $1'], [/ · place (\d+)/g, ' · posto $1'],
     [re('Tied for #O'), 'Pari merito al $1° posto'], [re('Best #O-placed'), 'Migliori $1°'], [re('#O best #O'), '$1° tra le $2°'],
