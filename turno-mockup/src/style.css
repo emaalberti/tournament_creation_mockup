@@ -519,3 +519,6 @@ li.sortable .handle { color: #9CA3AF; }
 .tray-list .gcard { margin: 0; }
 .blocks { border: 1px solid var(--line-soft); background: var(--aside); padding: 12px 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
 .col-pick thead th:nth-child(-n+2) { padding: 8px 10px; vertical-align: bottom; }
+
+.mx-time.q, .mx-cell.q { border-left-color: transparent; }
+.mx-cell.half:not(.q) { border-left: 1px dotted var(--line-soft); }

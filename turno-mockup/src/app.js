@@ -715,7 +715,7 @@
       ${graph.errors.length ? html`<${Note} tone="bad"><b>Da correggere</b><ul>${graph.errors.map((e, i) => html`<li key=${i}>${T(e.msg)}</li>`)}</ul><//>` : null}
       <ol className="riep">${phases.map((p) => { const r = ranges[p.id]; const nx = TE.downstreamOf(cat, p); const col = branchColor(cat, p); return html`<li key=${p.id}><button onClick=${() => open(p.id)}>
         <span className="rp-n">#${p.order}</span>
-        <span className="rp-main"><b>${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b><span className="muted small">${typeLabel(p.type)} · ${p.entrants.length} squadre · ${TE.phaseGames(cat, p.id).length} partite</span></span>
+        <span className="rp-main"><b>${col ? html`<i className="sq" style=${{ background: col }}></i> ` : null}${p.name}</b><span className="muted small">${typeLabel(p.type)} · ${p.entrants.length} squadre · ${TE.phaseGames(cat, p.id).length} ${TE.phaseGames(cat, p.id).length === 1 ? 'partita' : 'partite'}</span></span>
         <span className="rp-out">${r ? html`<b className="ok-t">Classifica finale</b>` : html`<span>→ ${nx.map((q) => q.name).join(', ')}</span>${excluded[p.id] ? html`<small className="muted">${excluded[p.id]} ${excluded[p.id] === 1 ? 'esce' : 'escono'} qui</small>` : null}`}</span></button></li>`; })}</ol>
       <div className="row"><${Btn} onClick=${() => setView('programma')}>Vai al programma<//>${pub ? null : html`<${Btn} kind="primary bev" disabled=${graph.errors.length > 0} onClick=${() => { act((d) => { d.tournament.status = 'PUBLISHED'; }); say('Torneo attivo: ora puoi inserire i risultati.', 'good'); }}>Attiva torneo →<//>`}</div>
     </div></section>`;
@@ -1364,7 +1364,7 @@
   function ScheduleMatrix(ctx) {
     const { st, act, say } = ctx;
     const s = st.schedule;
-    const SLOT = 30;
+    const SLOT = 15;
     const days = [...new Set(s.blocks.map((b) => b.day))].sort();
     const [day0, setDay] = useState(null);
     const day = days.includes(day0) ? day0 : days[0];
@@ -1423,22 +1423,22 @@
             <button className="btn sm" onClick=${() => setShowBlocks(!showBlocks)}>${showBlocks ? 'Chiudi' : 'Giorni, orari e campi'}</button></div>
           <div className="row">
             <label className="row small" htmlFor="rest-min" style=${{ gap: 6 }}><span>Pausa minima tra due partite di una squadra</span><input id="rest-min" className="num" type="number" min="0" step="5" value=${st.tournament.restMinutes} onChange=${(e) => act((d) => { d.tournament.restMinutes = Math.max(0, +e.target.value || 0); })} /><span className="muted">min</span></label>
-            <${Btn} kind="primary sm" disabled=${!s.blocks.length} onClick=${() => ask2(ctx, () => { const r = act((d) => TE.generateFixedSchedule(d)); say(r.unplaced ? `${r.placed} partite messe in calendario, ${r.unplaced} non ci stanno.` : `Tutte le ${r.placed} partite in calendario.`, r.unplaced ? 'warn' : 'good'); })}>Riempi in automatico<//>
+            <${Btn} kind="primary sm" disabled=${!s.blocks.length} onClick=${() => ask2(ctx, () => { const r = act((d) => TE.generateFixedSchedule(d)); say(r.unplaced ? `${r.placed} partite messe in calendario, ${r.unplaced} ${r.unplaced === 1 ? 'non ci sta' : 'non ci stanno'}: le trovi sotto, in “Da mettere in calendario”.` : `Tutte le ${r.placed} partite in calendario.`, r.unplaced ? 'warn' : 'good'); })}>Riempi in automatico<//>
           </div>
         </div>
         ${showBlocks ? html`<${BlocksEditor} ...${ctx} />` : null}
         <div className="flags"><span className="field-label">Evidenzia</span>${st.categories.map((c) => flag('c:' + c.id, c.name))}${allPhases.map(({ c, p }) => flag('p:' + p.id, `${st.categories.length > 1 ? c.name + ' · ' : ''}${p.name}`, color[p.id]))}${Object.keys(flt).length ? html`<button className="linkbtn" onClick=${() => setFlt({})}>Mostra tutto</button>` : null}</div>
         ${Object.keys(clash).length ? html`<${Note} tone="warn">${Object.keys(clash).length} partite hanno una squadra impegnata in due posti, o senza la pausa minima: sono bordate di rosso.<//>` : null}
-        ${!rows.length ? html`<${Note}>Aggiungi una giornata con i campi in “Giorni, orari e campi”.<//>` : html`<div className="matrix-wrap"><div className="matrix" style=${{ gridTemplateColumns: `150px repeat(${N}, 60px)`, gridTemplateRows: `34px repeat(${rows.length}, 78px)` }}>
+        ${!rows.length ? html`<${Note}>Aggiungi una giornata con i campi in “Giorni, orari e campi”.<//>` : html`<div className="matrix-wrap"><div className="matrix" style=${{ gridTemplateColumns: `150px repeat(${N}, 32px)`, gridTemplateRows: `34px repeat(${rows.length}, 78px)` }}>
           <div className="mx-corner">Campo</div>
-          ${Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; return html`<div key=${'h' + i} className=${'mx-time' + (m % 60 ? ' half' : '')} style=${{ gridColumn: i + 2, gridRow: 1 }}>${m % 60 ? '' : toHHMM(m)}</div>`; })}
+          ${Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; if (m % 60 && i > 0) return null; const span = Math.min(N - i, (60 - (m % 60)) / SLOT); return html`<div key=${'h' + i} className="mx-time" style=${{ gridColumn: `${i + 2} / span ${span}`, gridRow: 1 }}>${toHHMM(m)}</div>`; })}
           ${rows.map((sp, r) => html`<div key=${'r' + sp.id} className="mx-court" style=${{ gridRow: r + 2, gridColumn: 1 }}><b>${sp.name}</b><small>${sp.venue}</small></div>`)}
-          ${rows.flatMap((sp, r) => Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; const ok = open(sp.id, m, SLOT); return html`<div key=${sp.id + i} className=${'mx-cell' + (ok ? '' : ' closed') + (m % 60 ? ' half' : '') + (over === sp.id + '@' + m ? ' over' : '')} style=${{ gridRow: r + 2, gridColumn: i + 2 }} ...${ok ? drop(sp.id, m) : {}}></div>`; }))}
+          ${rows.flatMap((sp, r) => Array.from({ length: N }, (_, i) => { const m = dStart + i * SLOT; const ok = open(sp.id, m, SLOT); return html`<div key=${sp.id + i} className=${'mx-cell' + (ok ? '' : ' closed') + (m % 60 ? ' half' : '') + (m % 30 ? ' q' : '') + (over === sp.id + '@' + m ? ' over' : '')} style=${{ gridRow: r + 2, gridColumn: i + 2 }} ...${ok ? drop(sp.id, m) : {}}></div>`; }))}
           ${placed.map((x) => { const a = s.assignments[x.g.id]; const r = rows.findIndex((sp) => sp.id === a.spaceId); if (r < 0) return null; const c0 = Math.round((toMin(a.start) - dStart) / SLOT); const span = Math.max(1, Math.round((toMin(a.end) - toMin(a.start)) / SLOT)); return gameCard(x, { gridRow: r + 2, gridColumn: `${c0 + 2} / span ${span}` }); })}
         </div></div>`}
       </section>
       <section className=${'card cut tray' + (over === 'tray' ? ' over' : '')} onDragOver=${(e) => { if (DRAG && DRAG.from === 'game') { e.preventDefault(); setOver('tray'); } }} onDrop=${(e) => { e.preventDefault(); const d = DRAG; DRAG = null; setOver(null); if (d && d.from === 'game') unassign(d.id); }}>
-        <header className="card-h"><div><div className="eb">Da mettere in calendario</div><p>${unplaced.length ? `${unplaced.length} partite senza orario. Trascinale in una cella del calendario; per togliere una partita dal calendario riportala qui.` : 'Tutte le partite hanno un orario. Per togliere una partita dal calendario trascinala qui.'}</p></div></header>
+        <header className="card-h"><div><div className="eb">Da mettere in calendario</div><p>${unplaced.length ? `${unplaced.length} ${unplaced.length === 1 ? 'partita' : 'partite'} senza orario. Trascinale in una cella del calendario; per togliere una partita dal calendario riportala qui.` : 'Tutte le partite hanno un orario. Per togliere una partita dal calendario trascinala qui.'}</p></div></header>
         <div className="tray-list">${unplaced.map((x) => gameCard(x))}</div>
       </section>
     </div>`;
