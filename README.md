@@ -3,10 +3,9 @@
 The tournament logic for [turno-sport](https://turno-sport.com/), designed by reverse-engineering Tourny (tourny.ca) and rebuilt as a standalone engine plus a working mockup.
 
 Sports: **Football, Futsal, Volleyball, Tennis, Padel**.
-Formats are **composed from phases** of three kinds: Groups, Knockout (single or double elimination) and Americano, linked by connectors that pick places from earlier rankings. The mockup starts completely empty (no name, sport or category): you fill in the event, add phases one by one, and its Format page shows what each phase type takes in, does and gives back.
+Formats are **composed from phases** of three kinds: Groups, Knockout (single or double elimination) and Americano, linked by connectors that pick places from earlier rankings. The mockup in [turno-mockup/](turno-mockup/) uses the Turno UI (in Italian) and starts from a sample padel tournament.
 
 - **Repository:** https://github.com/emaalberti/tournament_creation_mockup (personal account for now; move it to the company organization with Settings → Transfer ownership)
-- **Live mockup:** https://claude.ai/artifact/6gBNiJyCoX3waWHxGzaHwh (share it from the page's Share menu)
 - **Phase design:** [docs/PHASE-DESIGN.md](docs/PHASE-DESIGN.md), the phase/connector model the engine implements (in Italian)
 - **Spec:** [docs/SPEC.md](docs/SPEC.md), sport rules, standings, results, scheduling and the decisions log (§10). Its fixed formats (§4) are replaced by the phase design.
 - **Porting guide:** [docs/PORTING.md](docs/PORTING.md), how to move this into turno-sport
@@ -16,22 +15,21 @@ Formats are **composed from phases** of three kinds: Groups, Knockout (single or
 
 | Path | What it is |
 |---|---|
-| `mockup/engine.js` | **The engine.** Pure logic, no DOM or framework. This is the part to port. |
-| `mockup/app.js` | Throwaway mockup UI (React + htm from CDN). Not meant for production. |
-| `mockup/index.html` | Page shell and styling for the mockup. |
+| `turno-mockup/src/engine.js` | **The engine.** Pure logic, no DOM or framework. This is the part to port. |
+| `turno-mockup/src/` | Mockup UI (React + htm from CDN): `app.js`, `style.css`, `i18n.js` (Italian labels). Not meant for production. |
+| `turno-mockup/index.html` | The mockup as one file, built from `src/` by `build.py`. Do not edit it by hand. |
 | `tests/engine.test.js` | 58 engine checks: presets as phase graphs, placeholders, cascade invalidation, knockout final placings, reshuffled group stages with carried-over points, consolation from knockout places, BYEs, validation errors, Americano pairs, results, scheduling. |
-| `tests/ui.test.js` | Starting from an empty event in jsdom: builds Groups → A/B Flight by ticking places, plays and confirms it, then an Americano → pairs knockout. |
 | `docs/` | Design, spec, porting plan and research notes. |
 
 ## Run it
 
 ```bash
 npm test                 # engine tests (Node 18+, no install needed)
-npm install && npm run test:ui
-npm run serve            # then open http://localhost:8080
+npm run build            # rebuild turno-mockup/index.html after changing turno-mockup/src/
+open turno-mockup/index.html
 ```
 
-The mockup stores its state in the browser's localStorage. Event → “Clear everything” empties it again.
+The mockup stores its state in the browser's localStorage. "Ripristina esempio" in the sidebar brings back the sample tournament.
 
 ## Engine API at a glance
 
@@ -47,13 +45,3 @@ The mockup stores its state in the browser's localStorage. Event → “Clear ev
 - **Scheduling:** `generateFixedSchedule`, `buildQueue`, `fillCourts`
 
 State is plain JSON.
-
-
-
-Per testare il mockup in tranqui, naviga fino alla cartella mockup/ e poi starta index.html, su Mac è open index.html, bella.
-
-
-
-
-
-

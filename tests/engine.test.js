@@ -1,5 +1,5 @@
 // Phase-model engine tests. Usage: node p1.js [path/to/engine.js]
-const TE = require(process.argv[2] || require('path').join(__dirname, '../mockup/engine.js'));
+const TE = require(process.argv[2] || require('path').join(__dirname, '../turno-mockup/src/engine.js'));
 let fails = 0;
 const assert = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console.log('ok  ', m); };
 function mk(sport, tpl, n, flights) {

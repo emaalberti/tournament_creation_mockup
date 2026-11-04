@@ -4,7 +4,7 @@ Status: plan only. It is not started; it needs access to the turno-sport codebas
 
 ## Approach
 
-1. **Move the engine, not the mockup.** `mockup/engine.js` has no UI or framework dependencies. Convert it to the turno-sport language and conventions (e.g. TypeScript), keep the tests, and call it from existing code. `app.js` stays behind.
+1. **Move the engine, not the mockup.** `turno-mockup/src/engine.js` has no UI or framework dependencies. Convert it to the turno-sport language and conventions (e.g. TypeScript), keep the tests, and call it from existing code. `app.js` stays behind.
 2. **Run standings and advancement where official results live** (normally the server), so every screen shows the same ranking.
 3. **Small, reversible database migrations**, one feature at a time.
 4. **Ship feature by feature**, each reviewed on staging before production.

@@ -1867,7 +1867,6 @@ li.sortable .handle { color: #9CA3AF; }
   const statusTone = { DRAFT: 'warn', READY: '', IN_PROGRESS: 'blue', COMPLETE: 'warn', CONFIRMED: 'green' };
   const StatusTag = ({ st, cat, phase }) => { const s = TE.phaseStatus(st, cat, phase); return html`<${Tag} tone=${statusTone[s]}>${TE.STATUS_LABEL[s]}<//>`; };
   const typeLabel = (t) => TE.PHASE_TYPES[t].label;
-  const kindWord = (phase) => (TE.PHASE_TYPES[phase.type].kind === 'PLAYER' ? 'giocatori' : 'squadre');
   // giocatori per iscrizione negli sport a coppie: 1 = singolo, 2 = coppia (scelto per categoria; tennis parte dai singoli)
   const pairSize = (st, cat) => (!TE.SPORTS[st.tournament.sport] || !TE.SPORTS[st.tournament.sport].players ? 0 : cat.format.teamSize || (st.tournament.sport === 'TENNIS' ? 1 : 2));
   // riordino con drag & drop (criteri, parità, coda partite): props(lista, indice, classi) da mettere sul <li>
@@ -2151,24 +2150,8 @@ li.sortable .handle { color: #9CA3AF; }
   }
 
   // ---------- logica di selezione (dal mockup, invariata) ----------
-  const RANKING_KINDS = {
-    POOL: { label: 'Classifica del girone', help: 'Posizioni dentro ogni girone. “1°–2°” = le prime due di ogni girone.' },
-    CROSS: { label: 'Classifica tra gironi', help: 'Confronta le squadre con lo stesso piazzamento in gironi diversi, per esempio tutte le seconde. “1° tra le 2°” = la migliore seconda.' },
-    OVERALL: { label: 'Classifica generale', help: 'Tutte le squadre della fase in un’unica tabella.' },
-    FINAL: { label: 'Piazzamenti finali', help: '1°, 2°, poi per turno di eliminazione e criteri di spareggio.' },
-    PLAYERS: { label: 'Classifica giocatori', help: 'Giocatori per punti conquistati.' },
-  };
   const kindsFor = (src) => (src.type === 'GROUPS' ? ['POOL', 'CROSS', 'OVERALL'] : src.type === 'KNOCKOUT' ? ['FINAL'] : ['PLAYERS']);
   const kindOfRanking = (rid, src) => (rid.startsWith('pool:') ? 'POOL' : rid.startsWith('cross:') ? 'CROSS' : rid === 'final' ? 'FINAL' : src.type === 'AMERICANO' ? 'PLAYERS' : 'OVERALL');
-  function describeSelector(cat, s) {
-    const p = TE.findPhase(cat, s.fromPhase); const pos = s.positions.map((x) => x + '°').join(', ');
-    if (!p) return ['?', ''];
-    if (s.ranking === 'pool:*') return ['Classifica del girone', `${pos} di ogni girone`];
-    if (s.ranking.startsWith('pool:')) { const g = p.pools.find((q) => `pool:${q.number}` === s.ranking); return ['Classifica del girone', `${pos} del ${g ? poolName(cat, p, g) : 'girone'}`]; }
-    if (s.ranking.startsWith('cross:')) return ['Classifica tra gironi', `${pos} tra le ${s.ranking.slice(6)}° classificate`];
-    if (s.ranking === 'final') return ['Piazzamenti finali', pos];
-    return [p.type === 'AMERICANO' ? 'Classifica giocatori' : 'Classifica generale', pos];
-  }
   function rankingItems(cat, src, kind) {
     const name = (rid, pos) => { const id = src.snapshot && src.snapshot[rid] && src.snapshot[rid][pos - 1]; return id ? TE.participantName(cat, src, id) : null; };
     const item = (rid, pos, label, group) => ({ key: `${rid}|${pos}`, ranking: rid, pos, label, group, who: name(rid, pos) });
@@ -2180,47 +2163,6 @@ li.sortable .handle { color: #9CA3AF; }
     }
     const rid = kind === 'FINAL' ? 'final' : 'overall';
     return src.entrants.map((_, i) => item(rid, i + 1, i === src.entrants.length - 1 && i > 0 ? `${i + 1}° (ultima)` : `${i + 1}°`, null));
-  }
-  function selectorKeys(src, sels) {
-    const keys = new Set();
-    sels.filter((s) => s.fromPhase === src.id).forEach((s) => {
-      const rids = s.ranking === 'pool:*' ? src.pools.map((p) => `pool:${p.number}`) : [s.ranking];
-      rids.forEach((rid) => s.positions.forEach((pos) => keys.add(`${rid}|${pos}`)));
-    });
-    return keys;
-  }
-  function keysToSelectors(src, keys) {
-    const by = {};
-    [...keys].forEach((k) => { const [rid, pos] = k.split('|'); (by[rid] = by[rid] || []).push(+pos); });
-    Object.values(by).forEach((a) => a.sort((x, y) => x - y));
-    const out = [];
-    const pools = src.pools.map((p) => `pool:${p.number}`);
-    const poolSel = pools.filter((r) => by[r]);
-    if (poolSel.length) {
-      const union = [...new Set(poolSel.flatMap((r) => by[r]))].sort((a, b) => a - b);
-      const every = src.pools.every((p) => { const want = union.filter((x) => x <= p.ids.length); const got = by[`pool:${p.number}`] || []; return want.length === got.length && want.every((x, i) => x === got[i]); });
-      if (every) out.push({ fromPhase: src.id, ranking: 'pool:*', positions: union });
-      else poolSel.forEach((r) => out.push({ fromPhase: src.id, ranking: r, positions: by[r] }));
-    }
-    Object.keys(by).filter((r) => r.startsWith('cross:')).sort((a, b) => +a.slice(6) - +b.slice(6)).forEach((r) => out.push({ fromPhase: src.id, ranking: r, positions: by[r] }));
-    ['overall', 'final'].forEach((r) => { if (by[r]) out.push({ fromPhase: src.id, ranking: r, positions: by[r] }); });
-    return out;
-  }
-  // posti di "src" già presi da altre fasi: chiave → nome della fase
-  function takenKeys(cat, src, exceptPhaseId) {
-    const taken = {};
-    cat.connectors.filter((c) => c.to !== exceptPhaseId).forEach((c) => selectorKeys(src, c.selectors).forEach((k) => { taken[k] = (TE.findPhase(cat, c.to) || {}).name; }));
-    return taken;
-  }
-  // connettore per una nuova fase: prende i posti ancora liberi di src, nello stesso tipo di classifica già usato
-  function freeConnector(cat, src, type, kindHint) {
-    const used = cat.connectors.flatMap((c) => c.selectors).find((s) => s.fromPhase === src.id);
-    const kind = kindHint || (used ? kindOfRanking(used.ranking, src) : src.type === 'GROUPS' ? (type === 'GROUPS' ? 'OVERALL' : 'POOL') : src.type === 'KNOCKOUT' ? 'FINAL' : 'PLAYERS');
-    const taken = takenKeys(cat, src, null);
-    const free = rankingItems(cat, src, kind).filter((x) => !taken[x.key]).map((x) => x.key);
-    if (!free.length) return null;
-    const seeding = kind === 'POOL' ? 'BY_SOURCE_POSITION' : 'SELECTOR_ORDER';
-    return { id: TE.uid('con'), seeding, transform: null, selectors: keysToSelectors(src, new Set(free)) };
   }
   function useGuard({ cat, phase, ask }) {
     return (what, fn) => {
@@ -2625,8 +2567,6 @@ li.sortable .handle { color: #9CA3AF; }
           <button className="btn primary bev" disabled=${bad} title="Nessuna fase dopo questa: i suoi piazzamenti sono una classifica finale" onClick=${() => open('riepilogo')}>✓ Fine del ramo →</button>`}
     </footer>`;
   }
-  const Stepper = ({ id, label, value, min, max, onChange, readOnly, hint }) => html`<div className="field"><span className="field-label" id=${id + '-l'}>${label}</span>
-    <div className="stepper" role="group" aria-labelledby=${id + '-l'}>${readOnly ? null : html`<button className="stp" aria-label="Diminuisci" disabled=${value <= min} onClick=${() => onChange(value - 1)}>−</button>`}<span className="stp-v" id=${id}>${value}</span>${readOnly ? null : html`<button className="stp" aria-label="Aumenta" disabled=${value >= max} onClick=${() => onChange(value + 1)}>+</button>`}</div>${hint ? html`<span className="hint">${hint}</span>` : null}</div>`;
   const gamesPerTeam = (phase) => { const c = phase.config; const m = Math.max(0, ...phase.pools.map((p) => p.ids.length)); return c.games === 'ALL_ONCE' ? m - 1 : c.games === 'ALL_TWICE' ? 2 * (m - 1) : c.gamesPerTeam; };
   function GamesOptions({ st, cat, phase, act, ask }) {
     const cfg = phase.config;
@@ -2691,21 +2631,6 @@ li.sortable .handle { color: #9CA3AF; }
       <${WinFoot} ...${ctx} msg=${`${n} posizioni finali disponibili per la fase successiva`} />
     </div>`;
   }
-  function Crossovers({ cat, phase, act, ask }) {
-    const cfg = phase.config;
-    const guard = useGuard({ cat, phase, ask });
-    const upd = (patch) => guard('Cambiare gli incroci', () => act((d, c) => TE.updatePhase(d, c, phase.id, { config: patch })));
-    const [ca, setCa] = useState(1); const [cb, setCb] = useState(2);
-    if (phase.pools.length < 2) return null;
-    return html`<details className="disc"><summary>Gironi incrociati${cfg.crossovers.length ? ` (${cfg.crossovers.length})` : ''}</summary>
-      <p className="hint" style=${{ marginTop: 0 }}>Le squadre di due gironi abbinati giocano contro l’altro girone invece che nel proprio.</p>
-      ${cfg.crossovers.map(([x, y], i) => html`<div className="row" key=${i}><span>${poolName(cat, phase, phase.pools[x - 1])} ⇄ ${poolName(cat, phase, phase.pools[y - 1])}</span><button className="icon-btn" aria-label="Rimuovi incrocio" onClick=${() => upd({ crossovers: cfg.crossovers.filter((_, k) => k !== i) })}>×</button></div>`)}
-      <div className="row"><select aria-label="Primo girone" value=${ca} onChange=${(e) => setCa(+e.target.value)}>${phase.pools.map((q) => html`<option key=${q.number} value=${q.number}>${poolName(cat, phase, q)}</option>`)}</select><span>⇄</span>
-        <select aria-label="Secondo girone" value=${cb} onChange=${(e) => setCb(+e.target.value)}>${phase.pools.map((q) => html`<option key=${q.number} value=${q.number}>${poolName(cat, phase, q)}</option>`)}</select>
-        <${Btn} kind="sm" disabled=${ca === cb || cfg.crossovers.flat().some((x) => x === ca || x === cb)} onClick=${() => upd({ crossovers: [...cfg.crossovers, [ca, cb]] })}>Aggiungi incrocio<//></div>
-    </details>`;
-  }
-
   const kb = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
   // ---- trascinamento condiviso: una posizione dall'elenco, o il contenuto di un posto (tabellone / girone) ----
   let DRAG = null;
@@ -3083,17 +3008,6 @@ li.sortable .handle { color: #9CA3AF; }
     <//>`;
   }
 
-  // ---------- tabellone ----------
-  function BracketView({ st, cat, phase, onGame }) {
-    const games = TE.phaseGames(cat, phase.id);
-    const groups = {}, order = [];
-    games.forEach((g) => { const key = (g.bracket === 'L' ? 'L · ' : g.bracket === 'P' || g.bracket === 'C' ? 'P · ' : '') + g.label; if (!groups[key]) { groups[key] = []; order.push(key); } groups[key].push(g); });
-    const sections = phase.config.eliminations === 2
-      ? [['Tabellone vincenti', order.filter((k) => groups[k][0].bracket === 'U')], ['Tabellone perdenti', order.filter((k) => groups[k][0].bracket === 'L')], ['Finalissima', order.filter((k) => groups[k][0].bracket === 'GF')]]
-      : [['Tabellone principale', order.filter((k) => groups[k][0].bracket === 'M')], ['Piazzamenti e consolazione', order.filter((k) => groups[k][0].bracket !== 'M')]];
-    return html`<div>${sections.filter(([, ks]) => ks.length).map(([title, ks]) => html`<div key=${title} className="bracket-sec"><div className="sub-t">${title}</div>
-      <div className="bracket">${ks.map((k) => html`<div className="b-col" key=${k}><div className="b-col-h">${T(k.replace(/^(L|P) · /, ''))}</div>${groups[k].map((g) => html`<${GameCard} key=${g.id} st=${st} cat=${cat} g=${g} onClick=${onGame} />`)}</div>`)}</div></div>`)}</div>`;
-  }
   function GameCard({ st, cat, g, onClick }) {
     const n = TE.gameNumbers(st, cat, g);
     const needed = TE.isNeeded(st, cat, g);

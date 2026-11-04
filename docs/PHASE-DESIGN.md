@@ -1,6 +1,6 @@
 # Design: fasi componibili (black box)
 
-Versione 0.2 · 2026-10-28 · Stato: **implementato nel mockup** (`mockup/engine.js`, testato in `tests/engine.test.js`). Le scelte fatte durante l'implementazione sono nel §14.
+Versione 0.2 · 2026-10-28 · Stato: **implementato nel mockup** (`turno-mockup/src/engine.js`, testato in `tests/engine.test.js`). Le scelte fatte durante l'implementazione sono nel §14.
 Sostituisce i formati fissi della [SPEC](SPEC.md) §4 con un modello in cui l'organizzatore **compone** il torneo collegando fasi. I template di oggi (RR → SE, ecc.) restano solo come scorciatoie che creano un grafo già pronto.
 
 ---
